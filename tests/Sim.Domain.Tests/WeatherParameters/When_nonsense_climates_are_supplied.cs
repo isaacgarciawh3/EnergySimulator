@@ -30,6 +30,10 @@ public class When_nonsense_climates_are_supplied
     private readonly Exception? _cloudNoiseAboveOne = Refusal(Valid with { CloudNoiseScale = 1.5 });
     private readonly Exception? _winterBiasBeyondTotal = Refusal(Valid with { WinterCloudBias = 1.5 });
     private readonly Exception? _negativeDayLengthSwing = Refusal(Valid with { DayLengthAmplitudeHours = -1 });
+    private readonly Exception? _longestDayBeforeTheYear = Refusal(Valid with { LongestDayOfYear = 0 });
+    private readonly Exception? _coldestHourBeforeTheDay = Refusal(Valid with { ColdestHourOfDay = -1 });
+    private readonly Exception? _negativeCloudNoise = Refusal(Valid with { CloudNoiseScale = -0.1 });
+    private readonly Exception? _negativeCloudAttenuation = Refusal(Valid with { CloudAttenuation = -0.1 });
 
     [Fact] public void Should_refuse_a_day_length_swing_wider_than_the_mean_or_the_shortest_day_has_no_daylight() => _swingWiderThanTheMean.ShouldBeOfType<SimulationInvariantViolation>();
     [Fact] public void Should_refuse_a_longest_day_beyond_twenty_four_hours() => _dayLongerThanTwentyFourHours.ShouldBeOfType<SimulationInvariantViolation>();
@@ -46,4 +50,8 @@ public class When_nonsense_climates_are_supplied
     [Fact] public void Should_refuse_cloud_noise_scaled_beyond_one() => _cloudNoiseAboveOne.ShouldBeOfType<SimulationInvariantViolation>();
     [Fact] public void Should_refuse_a_winter_bias_beyond_total_cloud() => _winterBiasBeyondTotal.ShouldBeOfType<SimulationInvariantViolation>();
     [Fact] public void Should_refuse_a_negative_day_length_swing() => _negativeDayLengthSwing.ShouldBeOfType<SimulationInvariantViolation>();
+    [Fact] public void Should_refuse_a_longest_day_before_the_year_starts() => _longestDayBeforeTheYear.ShouldBeOfType<SimulationInvariantViolation>();
+    [Fact] public void Should_refuse_a_coldest_hour_before_the_day_starts() => _coldestHourBeforeTheDay.ShouldBeOfType<SimulationInvariantViolation>();
+    [Fact] public void Should_refuse_negative_cloud_noise() => _negativeCloudNoise.ShouldBeOfType<SimulationInvariantViolation>();
+    [Fact] public void Should_refuse_negative_cloud_attenuation() => _negativeCloudAttenuation.ShouldBeOfType<SimulationInvariantViolation>();
 }
