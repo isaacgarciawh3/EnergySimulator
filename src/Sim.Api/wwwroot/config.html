@@ -25,9 +25,11 @@
 
   <div class="notice locked">
     <b>Fixed by the assignment, not by this page.</b> The neighbourhood always has exactly
-    <b>30 houses</b> and exactly <b>6 public charge points</b>. Those two numbers are stated as constraints of the
-    problem, so they are enforced in the domain model (<code>Neighbourhood</code> rejects any other count) rather than
-    exposed as settings. Everything below is a genuine setting.
+    <b>30 houses</b> and exactly <b>6 public charge points</b>. Those two numbers are constraints of the problem rather
+    than choices, so they are enforced in the domain model instead of being exposed here: every
+    <code>Neighbourhood</code> is constructed through <code>NeighbourhoodInvariants</code>, which rejects any other
+    count outright. No configuration this page can send is capable of violating them. Everything below is a genuine
+    setting.
   </div>
 
   <form id="form" autocomplete="off">
@@ -137,11 +139,11 @@
           <span class="help">Energy out divided by energy in over a full cycle, 10 to 100 %. Sent to the API as a fraction, so 90 % is stored as 0.90.</span>
         </div>
         <div class="field">
-          <label for="peakShavingThresholdKw">Peak shaving threshold</label>
+          <label for="peakShavingThresholdKw">Optional hard ceiling (kW) &mdash; 0 means use the percentile strategy only</label>
           <input id="peakShavingThresholdKw" type="number" min="0" max="100000" step="1" required/>
-          <span class="help"><b>Optional hard ceiling, 0 = percentile strategy only.</b> Above 0 the battery also discharges to hold the
-            neighbourhood under this many kW, on top of its normal behaviour of discharging in the top 20 % of observed load and
-            recharging in the bottom 40 %.</span>
+          <span class="help">Above 0 the battery also discharges to hold the neighbourhood under this many kW, on top of its
+            normal behaviour of discharging above the 80th percentile of recent load (the top 20 %) and recharging below the
+            40th percentile.</span>
           <span class="err" id="peakShavingThresholdKwErr"></span>
         </div>
       </fieldset>

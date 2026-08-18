@@ -77,7 +77,12 @@ function collect() {
 
   if (errors.length) { $(errors[0]).focus(); return null; }
 
+  // Spread the record the server last confirmed, then override only the fields
+  // this page edits. The PUT is a whole-record replace, so anything the API
+  // sends that this form does not show (tickDuration today, whatever the API
+  // grows tomorrow) is echoed back untouched instead of being silently dropped.
   return {
+    ...loaded,
     seed,
     startInstant,
     tickMinutes: Math.round(plain.tickMinutes),
