@@ -95,6 +95,36 @@ hold several assets at once. The assignment explicitly allows houses to have
 multiple assets. Base household consumption is not a probability - it is an
 invariant, and a house without it cannot be constructed.
 
+## A-012 - Configuration precedence
+
+**Modelling choice.** Three sources can supply the scenario, and they are
+consulted in this order:
+
+1. A row persisted in SQLite. It wins, because its existence means an operator
+   changed something through the UI and we should not overrule that on restart.
+2. The `Scenario` section of `appsettings.Simulation.json`. Authoritative on a
+   first boot, when nothing is stored yet.
+3. Hardcoded fallback values in C#, used only when the file is absent, so that
+   the application still starts on a machine where the file was deleted.
+
+The consequence worth stating: editing the file after the first run appears to
+do nothing, because the persisted row is winning. That is intended, not a bug,
+and the documented recovery is to reset back to the file scenario.
+
+What no source can do, at any precedence: change the number of houses or public
+chargers. Those are invariants (A-013), not configuration.
+
+## A-013 - Constraints are not configuration
+
+**Modelling choice**, and the reason the configuration file has a hole in it.
+"Exactly 30 houses" and "exactly 6 public chargers" are stated by the assignment
+as absolutes. They are enforced by `NeighbourhoodInvariants` in the domain and
+deliberately absent from the configuration file, because a file that can set the
+house count to 25 is a file that can violate a requirement.
+
+The asset distribution is the opposite case: the assignment gives 40/30/20 as an
+example, so it is a genuine setting and lives in the file.
+
 ## A-007 - Money is out of scope
 
 **Modelling choice.** The assignment asks for energy accounting in kWh and never
