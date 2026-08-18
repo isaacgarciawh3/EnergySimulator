@@ -38,3 +38,9 @@ Every correction in that file is recorded as it was given. Several of them are
 corrections of real mistakes, including the two that changed the architecture
 most: physics living inside the Energy context, and the scenario being hardcoded
 in C# rather than read from the configuration file.
+| 006 | [006-full-session-log.md](006-full-session-log.md) | **Complete session log — every prompt verbatim, in order, with what each produced** |
+
+## Tasks
+
+`tasks/` holds all 13 task files the work was executed from, mirrored from `docs/tasks/`.
+Each carries its requirements, acceptance criteria, verification performed, and final status.

@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: main
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-001
-titulo: Build the Neighbourhood Energy Simulation end-to-end (Isaac)
-tipo: feature
-prioridade: critica
-status: em_execucao
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+title: Build the Neighbourhood Energy Simulation end-to-end (Isaac)
+type: feature
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: []
-bloqueia: []
+depends_on: []
+blocks: []
 ---
 
 ## Objective

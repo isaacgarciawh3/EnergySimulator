@@ -1,19 +1,19 @@
 ---
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: main
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 task_id: TASK-007
-titulo: Animated dashboard + configuration page (Isaac)
-tipo: feature
-prioridade: critica
-status: aprovada
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
-epico: Utilus home assignment
-depende_de: [TASK-006]
-bloqueia: []
+title: Animated dashboard + configuration page (Isaac)
+type: feature
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
+epic: Utilus home assignment
+depends_on: [TASK-006]
+blocks: []
 ---
 
 ## Objective
