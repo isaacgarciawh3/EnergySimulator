@@ -1,7 +1,6 @@
 using Shouldly;
 using Sim.Application.Configuration;
 using Sim.Energy.Domain;
-using Sim.Simulation;
 using Sim.Simulation.Domain;
 
 namespace Sim.Domain.Tests;
@@ -180,7 +179,7 @@ public class WeatherMustInfluenceTheAssets
     private static double TotalFor(AssetType type, DateTimeOffset start)
     {
         var neighbourhood = NeighbourhoodBuilder.Build(Config with { PvShare = 1.0, HeatPumpShare = 1.0 });
-        var simulator = new NeighbourhoodSimulator(neighbourhood, 20260818, start, TimeSpan.FromMinutes(15));
+        var simulator = new SimulationRun(neighbourhood, 20260818, start, TimeSpan.FromMinutes(15));
         var ids = neighbourhood.AllAssets.Where(a => a.Type == type).Select(a => a.MeterId).ToHashSet();
 
         var total = 0.0;
@@ -213,7 +212,7 @@ public class WeatherMustInfluenceTheAssets
     {
         var neighbourhood = NeighbourhoodBuilder.Build(Config with { PvShare = 1.0 });
         var midnight = new DateTimeOffset(2026, 12, 21, 0, 0, 0, TimeSpan.Zero);
-        var simulator = new NeighbourhoodSimulator(neighbourhood, 20260818, midnight, TimeSpan.FromMinutes(15));
+        var simulator = new SimulationRun(neighbourhood, 20260818, midnight, TimeSpan.FromMinutes(15));
         var pv = neighbourhood.AllAssets.Where(a => a.Type == AssetType.Pv).Select(a => a.MeterId).ToHashSet();
 
         var readings = simulator.Advance().Readings.Where(r => pv.Contains(r.MeterId));
