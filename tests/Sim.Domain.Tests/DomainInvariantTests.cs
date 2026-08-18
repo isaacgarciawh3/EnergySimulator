@@ -19,7 +19,7 @@ public sealed class DomainInvariantTests
     [InlineData(31)]
     [InlineData(60)]
     public void A_neighbourhood_rejects_any_house_count_other_than_thirty(int houseCount) =>
-        Should.Throw<ArgumentException>(() => new Neighbourhood(Houses(houseCount), ChargePoints(6)));
+        Should.Throw<NeighbourhoodInvariantViolation>(() => new Neighbourhood(Houses(houseCount), ChargePoints(6)));
 
     // 9
     [Fact]
@@ -38,7 +38,7 @@ public sealed class DomainInvariantTests
     [InlineData(7)]
     [InlineData(12)]
     public void A_neighbourhood_rejects_any_public_charger_count_other_than_six(int chargerCount) =>
-        Should.Throw<ArgumentException>(() => new Neighbourhood(Houses(30), ChargePoints(chargerCount)));
+        Should.Throw<NeighbourhoodInvariantViolation>(() => new Neighbourhood(Houses(30), ChargePoints(chargerCount)));
 
     // 10
     [Fact]
@@ -58,7 +58,7 @@ public sealed class DomainInvariantTests
             .Append(new Asset("house-01/pv", "house-01", AssetType.Pv, 4.0))
             .ToList();
 
-        Should.Throw<ArgumentException>(() => new Neighbourhood(Houses(30), impostors));
+        Should.Throw<NeighbourhoodInvariantViolation>(() => new Neighbourhood(Houses(30), impostors));
     }
 
     // 11
@@ -67,8 +67,8 @@ public sealed class DomainInvariantTests
     {
         Asset[] solarOnly = [new Asset("house-01/pv", "house-01", AssetType.Pv, 4.0)];
 
-        Should.Throw<ArgumentException>(() => new House("house-01", solarOnly));
-        Should.Throw<ArgumentException>(() => new House("house-01", []));
+        Should.Throw<NeighbourhoodInvariantViolation>(() => new House("house-01", solarOnly));
+        Should.Throw<NeighbourhoodInvariantViolation>(() => new House("house-01", []));
     }
 
     // 11

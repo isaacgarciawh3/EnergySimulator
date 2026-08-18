@@ -11,17 +11,14 @@ namespace Sim.Energy.Domain;
 /// </summary>
 public sealed class Neighbourhood
 {
-    public const int RequiredHouses = 30;
-    public const int RequiredPublicChargers = 6;
+    public const int RequiredHouses = NeighbourhoodInvariants.RequiredHouses;
+    public const int RequiredPublicChargers = NeighbourhoodInvariants.RequiredPublicChargers;
 
     public Neighbourhood(IReadOnlyList<House> houses, IReadOnlyList<Asset> publicChargePoints, Battery? battery = null)
     {
-        if (houses.Count != RequiredHouses)
-            throw new ArgumentException($"Exactly {RequiredHouses} houses required, got {houses.Count}.", nameof(houses));
-        if (publicChargePoints.Count != RequiredPublicChargers)
-            throw new ArgumentException($"Exactly {RequiredPublicChargers} public charge points required, got {publicChargePoints.Count}.", nameof(publicChargePoints));
-        if (publicChargePoints.Any(a => a.Type != AssetType.PublicEvCharger))
-            throw new ArgumentException("Public charge points must all be of type PublicEvCharger.", nameof(publicChargePoints));
+        NeighbourhoodInvariants.TheNeighbourhoodMustHaveExactlyThirtyHouses(houses);
+        NeighbourhoodInvariants.TheNeighbourhoodMustHaveExactlySixPublicChargers(publicChargePoints);
+        NeighbourhoodInvariants.EveryPublicChargePointMustBeAPublicCharger(publicChargePoints);
 
         Houses = houses;
         PublicChargePoints = publicChargePoints;
@@ -29,7 +26,15 @@ public sealed class Neighbourhood
         // Fixed order: floating point addition is not associative, so a stable
         // enumeration order is what keeps aggregate results reproducible.
         AllAssets = houses.SelectMany(h => h.Assets).Concat(publicChargePoints).ToList();
+
+        NeighbourhoodInvariants.EveryMeterMustBeUniquelyIdentified(AllAssets, battery);
+        NeighbourhoodInvariants.EveryAssetMustHaveANonNegativeRating(AllAssets);
+
+        Distribution = AssetDistribution.Of(houses);
     }
+
+    /// <summary>The neighbourhood states its own asset distribution, so the documented figure cannot drift from reality.</summary>
+    public AssetDistribution Distribution { get; }
 
     public IReadOnlyList<House> Houses { get; }
     public IReadOnlyList<Asset> PublicChargePoints { get; }
