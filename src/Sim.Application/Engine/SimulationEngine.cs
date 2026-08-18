@@ -68,7 +68,9 @@ public sealed class SimulationEngine(ISimulationConfigurationStore configuration
             _simulator = new NeighbourhoodSimulator(_neighbourhood, unchecked((ulong)configuration.Seed),
                 configuration.StartInstant, configuration.TickDuration);
             _battery = _neighbourhood.Battery is { } spec ? new BatterySimulator(spec) : null;
-            _strategy = new PeakShavingStrategy(configuration.PeakShavingThresholdKw, configuration.BatteryRoundTripEfficiency);
+            _strategy = new PeakShavingStrategy(
+                configuration.PeakShavingThresholdKw > 0 ? configuration.PeakShavingThresholdKw : null,
+                configuration.BatteryRoundTripEfficiency);
             _ledger = new EnergyLedger();
             _peakWith = _peakWithout = _chargedKwh = _dischargedKwh = 0;
             projections.Reset();

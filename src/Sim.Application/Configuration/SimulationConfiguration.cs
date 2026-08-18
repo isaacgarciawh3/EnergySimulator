@@ -30,7 +30,7 @@ public sealed record SimulationConfiguration(
         BatteryCapacityKwh: 250,
         BatteryMaxPowerKw: 80,
         BatteryRoundTripEfficiency: 0.90,
-        PeakShavingThresholdKw: 45,
+        PeakShavingThresholdKw: 0,
         BatteryEnabled: true);
 
     public TimeSpan TickDuration => TimeSpan.FromMinutes(TickMinutes);
@@ -45,6 +45,6 @@ public sealed record SimulationConfiguration(
         BatteryCapacityKwh = Math.Clamp(BatteryCapacityKwh, 0, 100_000),
         BatteryMaxPowerKw = Math.Clamp(BatteryMaxPowerKw, 0, 10_000),
         BatteryRoundTripEfficiency = Math.Clamp(BatteryRoundTripEfficiency, 0.1, 1.0),
-        PeakShavingThresholdKw = Math.Clamp(PeakShavingThresholdKw, 1, 100_000),
+        PeakShavingThresholdKw = Math.Clamp(PeakShavingThresholdKw, 0, 100_000),
     };
 }
