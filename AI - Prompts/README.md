@@ -25,3 +25,16 @@ after the fact; corrections appear as later entries, not as rewrites.
 
 
 The `tasks/` subfolder mirrors the task files produced by Task-Creator during the build.
+
+## Note on completeness
+
+The logs above are the substantive prompts that shaped the architecture. The
+later part of the session was a rapid review loop - boundary corrections, the
+battery requirement, test coverage challenges, configuration and documentation
+audits - captured in `005-review-cycle-verbatim.md` rather than as one file per
+message, so the record stays readable.
+
+Every correction in that file is recorded as it was given. Several of them are
+corrections of real mistakes, including the two that changed the architecture
+most: physics living inside the Energy context, and the scenario being hardcoded
+in C# rather than read from the configuration file.

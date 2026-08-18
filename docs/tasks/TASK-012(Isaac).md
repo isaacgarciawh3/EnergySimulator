@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: feat/context-boundary-and-battery
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-012
-titulo: Neighbourhood battery and peak shaving (Isaac)
-tipo: feature
-prioridade: critica
-status: in_review
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+title: Neighbourhood battery and peak shaving (Isaac)
+type: feature
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: [TASK-011]
-bloqueia: [TASK-007]
+depends_on: [TASK-011]
+blocks: [TASK-007]
 ---
 
 ## Objective

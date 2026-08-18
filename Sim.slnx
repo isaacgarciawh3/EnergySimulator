@@ -10,6 +10,7 @@
     <Project Path="src/Sim.Simulation/Sim.Simulation.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Sim.Api.Tests/Sim.Api.Tests.csproj" />
     <Project Path="tests/Sim.Architecture.Tests/Sim.Architecture.Tests.csproj" />
     <Project Path="tests/Sim.Domain.Tests/Sim.Domain.Tests.csproj" />
   </Folder>

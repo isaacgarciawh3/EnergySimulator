@@ -123,9 +123,15 @@ public sealed class SimulationEngine(
         }
     }
 
+    /// <summary>
+    /// The snapshot is a cached projection, rebuilt on each tick. Run state is
+    /// therefore overlaid at read time rather than taken from the cache: pausing
+    /// stops the ticks, so a paused engine would otherwise keep serving the
+    /// `running: true` baked into the last snapshot it built, forever.
+    /// </summary>
     public DashboardSnapshot Snapshot()
     {
-        lock (_gate) return _snapshot ??= BuildSnapshot();
+        lock (_gate) return (_snapshot ??= BuildSnapshot()) with { Running = Running };
     }
 
     private void AdvanceOnce()

@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: feat/context-boundary-and-battery
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-013
-titulo: Move hardcoded asset parameters into an external configuration file (Isaac)
-tipo: refactor
-prioridade: alta
+title: Move hardcoded asset parameters into an external configuration file (Isaac)
+type: refactor
+priority: high
 status: done
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: [TASK-011, TASK-012]
-bloqueia: []
+depends_on: [TASK-011, TASK-012]
+blocks: []
 ---
 
 ## Objective
