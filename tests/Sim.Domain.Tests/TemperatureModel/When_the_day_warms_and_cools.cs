@@ -15,11 +15,11 @@ public class When_the_day_warms_and_cools
 
     public When_the_day_warms_and_cools()
     {
-        _atTheColdestHour = Sim.Simulation.Domain.Weather.TemperatureModel.DiurnalOffsetC(P.ColdestHourOfDay, P);
+        _atTheColdestHour = Sim.Simulation.Domain.Weather.TemperatureModel.OffsetByTimeOfDayC(P.ColdestHourOfDay, P);
         for (var hour = 0.0; hour < 24.0; hour += 0.5)
-            _lowestOfTheDay = Math.Min(_lowestOfTheDay, Sim.Simulation.Domain.Weather.TemperatureModel.DiurnalOffsetC(hour, P));
-        _midAfternoon = Sim.Simulation.Domain.Weather.TemperatureModel.DiurnalOffsetC(15.0, P);
-        _beforeDawn = Sim.Simulation.Domain.Weather.TemperatureModel.DiurnalOffsetC(3.0, P);
+            _lowestOfTheDay = Math.Min(_lowestOfTheDay, Sim.Simulation.Domain.Weather.TemperatureModel.OffsetByTimeOfDayC(hour, P));
+        _midAfternoon = Sim.Simulation.Domain.Weather.TemperatureModel.OffsetByTimeOfDayC(15.0, P);
+        _beforeDawn = Sim.Simulation.Domain.Weather.TemperatureModel.OffsetByTimeOfDayC(3.0, P);
     }
 
     [Fact]

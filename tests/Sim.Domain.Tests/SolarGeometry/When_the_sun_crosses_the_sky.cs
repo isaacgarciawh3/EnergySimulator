@@ -8,11 +8,11 @@ public class When_the_sun_crosses_the_sky
 {
     private static readonly WeatherParameters P = WeatherParameters.Default;
 
-    private readonly double _beforeDawnInSummer = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(2.0, 172, P);
-    private readonly double _lateEveningInSummer = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(23.5, 172, P);
-    private readonly double _atSolarNoon = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(12.0, 172, P);
-    private readonly double _summerNoon = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(12.0, 172, P);
-    private readonly double _winterNoon = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(12.0, 15, P);
+    private readonly double _beforeDawnInSummer = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(2.0, 172, P);
+    private readonly double _lateEveningInSummer = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(23.5, 172, P);
+    private readonly double _atSolarNoon = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(12.0, 172, P);
+    private readonly double _summerNoon = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(12.0, 172, P);
+    private readonly double _winterNoon = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(12.0, 15, P);
     private readonly double _lowestOfTheSweep = double.MaxValue;
     private readonly double _highestOfTheSweep = double.MinValue;
 
@@ -21,7 +21,7 @@ public class When_the_sun_crosses_the_sky
         for (var day = 1; day <= 365; day += 11)
             for (var hour = 0.0; hour < 24.0; hour += 0.25)
             {
-                var factor = Sim.Simulation.Domain.Weather.SolarGeometry.ClearSkyFactor(hour, day, P);
+                var factor = Sim.Simulation.Domain.Weather.SolarGeometry.RateTheClearSky(hour, day, P);
                 _lowestOfTheSweep = Math.Min(_lowestOfTheSweep, factor);
                 _highestOfTheSweep = Math.Max(_highestOfTheSweep, factor);
             }

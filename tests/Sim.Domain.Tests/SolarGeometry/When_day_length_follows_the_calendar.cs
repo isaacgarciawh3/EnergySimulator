@@ -8,7 +8,7 @@ public class When_day_length_follows_the_calendar
 {
     private static readonly WeatherParameters P = WeatherParameters.Default;
 
-    private readonly double _atTheSolstice = Sim.Simulation.Domain.Weather.SolarGeometry.DayLengthHours(P.LongestDayOfYear, P);
+    private readonly double _atTheSolstice = Sim.Simulation.Domain.Weather.SolarGeometry.MeasureTheDayLengthHours(P.LongestDayOfYear, P);
     private readonly double _shortest = double.MaxValue;
     private readonly double _longest = double.MinValue;
     private readonly double _sunrisePlusSunset;
@@ -17,13 +17,13 @@ public class When_day_length_follows_the_calendar
     {
         for (var day = 1; day <= 365; day++)
         {
-            var length = Sim.Simulation.Domain.Weather.SolarGeometry.DayLengthHours(day, P);
+            var length = Sim.Simulation.Domain.Weather.SolarGeometry.MeasureTheDayLengthHours(day, P);
             _shortest = Math.Min(_shortest, length);
             _longest = Math.Max(_longest, length);
         }
-        var length100 = Sim.Simulation.Domain.Weather.SolarGeometry.DayLengthHours(100, P);
-        _sunrisePlusSunset = Sim.Simulation.Domain.Weather.SolarGeometry.SunriseHour(length100)
-                           + Sim.Simulation.Domain.Weather.SolarGeometry.SunsetHour(length100);
+        var length100 = Sim.Simulation.Domain.Weather.SolarGeometry.MeasureTheDayLengthHours(100, P);
+        _sunrisePlusSunset = Sim.Simulation.Domain.Weather.SolarGeometry.FindTheSunriseHour(length100)
+                           + Sim.Simulation.Domain.Weather.SolarGeometry.FindTheSunsetHour(length100);
     }
 
     [Fact]

@@ -1,62 +1,57 @@
 namespace Sim.Simulation.Domain.Weather;
 
 /// <summary>
-/// Every constant the weather model uses, named and validated.
-///
-/// These were previously fifteen unnamed literals inside one method. Naming them
-/// is not decoration: it is what makes each rule reviewable, independently
-/// testable, and configurable from appsettings.Simulation.json.
+/// Every constant the weather model uses, named and validated. The defaults
+/// describe a northern-hemisphere maritime climate: coldest around day 15
+/// (mid January), warmest half a year later, longest day around 172 (the June
+/// solstice), cloudier winters, noise correlated over three-hour blocks.
+/// Validation refuses any combination that would silently produce a nonsense
+/// climate - a day-length swing wider than the mean would leave the shortest
+/// day with no daylight, cloud attenuation above one could drive irradiance
+/// negative - naming the field and the rule it broke.
 /// </summary>
 public sealed record WeatherParameters(
-    // Temperature: an annual cycle plus a daily cycle plus noise.
     double AnnualMeanC,
     double AnnualAmplitudeC,
     int ColdestDayOfYear,
     double DiurnalAmplitudeC,
     double ColdestHourOfDay,
     double NoiseAmplitudeC,
-
-    // Cloud cover: smoothed noise, biased cloudier in winter.
     double CloudNoiseScale,
     double WinterCloudBias,
-
-    // How long the weather stays correlated. Below this, conditions blend
-    // smoothly rather than jumping from one interval to the next.
     double NoiseCorrelationHours,
-
-    // Solar geometry: day length swings around the solstice.
     double MeanDayLengthHours,
     double DayLengthAmplitudeHours,
     int LongestDayOfYear,
-
-    // Irradiance: a clear-sky curve, attenuated by cloud.
     double ClearSkyExponent,
     double CloudAttenuation)
 {
     public const int DaysPerYear = 365;
     public const double HoursPerDay = 24.0;
 
-    /// <summary>Northern-hemisphere maritime climate, roughly the Netherlands.</summary>
     public static readonly WeatherParameters Default = new(
         AnnualMeanC: 10.0,
         AnnualAmplitudeC: 8.0,
-        ColdestDayOfYear: 15,          // mid-January
+        ColdestDayOfYear: 15,
         DiurnalAmplitudeC: 4.0,
-        ColdestHourOfDay: 3.0,         // coldest just before dawn
+        ColdestHourOfDay: 3.0,
         NoiseAmplitudeC: 3.0,
         CloudNoiseScale: 0.9,
         WinterCloudBias: 0.15,
         NoiseCorrelationHours: 3.0,
         MeanDayLengthHours: 12.0,
         DayLengthAmplitudeHours: 4.5,
-        LongestDayOfYear: 172,         // ~21 June
+        LongestDayOfYear: 172,
         ClearSkyExponent: 1.2,
         CloudAttenuation: 0.75);
 
-    /// <summary>
-    /// Fails loudly on values that would silently produce a nonsense climate -
-    /// a negative day length, or cloud that could push irradiance below zero.
-    /// </summary>
+    private static void Require(bool condition, string name, string requirement)
+    {
+        if (!condition) throw new Sim.Simulation.Domain.SimulationInvariantViolation($"WeatherParameters.{name} {requirement}.");
+    }
+
+    public TimeSpan NoiseCorrelationPeriod => TimeSpan.FromHours(NoiseCorrelationHours);
+
     public void Validate()
     {
         Require(AnnualAmplitudeC >= 0, nameof(AnnualAmplitudeC), "must not be negative");
@@ -75,12 +70,5 @@ public sealed record WeatherParameters(
             "must be smaller than the mean day length, otherwise the shortest day has no daylight");
         Require(MeanDayLengthHours + DayLengthAmplitudeHours < HoursPerDay, nameof(DayLengthAmplitudeHours),
             "must keep the longest day under 24 hours");
-    }
-
-    public TimeSpan NoiseCorrelationPeriod => TimeSpan.FromHours(NoiseCorrelationHours);
-
-    private static void Require(bool condition, string name, string requirement)
-    {
-        if (!condition) throw new Sim.Simulation.Domain.SimulationInvariantViolation($"WeatherParameters.{name} {requirement}.");
     }
 }

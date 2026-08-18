@@ -49,6 +49,13 @@ computed members that silently read MUTABLE state.
    to mutate. The functional features C# inherited from F# - switch
    expressions, records, pattern matching - are welcome where they make a rule
    read as a sentence.
+6. THE FLUENT CLAUSE (decided in review: "I like the fluent - not everything
+   needs to become a verb; well-written prose is also a goal"): a preposition
+   or Of is allowed in a method name ONLY when the function is PURE and its
+   call site reads as an English sentence - model.At(noon), Seasons.Of(month),
+   power.Over(quarter), neighbourhood.TypeOf(meterId). Everything else carries
+   its verb. Two objective criteria - pure, and reads as prose - so the clause
+   is reviewable, not a matter of taste.
 
 ## The technical finding behind the style point
 

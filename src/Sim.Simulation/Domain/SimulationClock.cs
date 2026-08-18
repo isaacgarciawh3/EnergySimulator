@@ -18,7 +18,6 @@ public sealed class SimulationClock
     public TimeSpan TickDuration { get; }
     public long TickIndex { get; private set; }
 
-    /// <summary>Consumes one interval: returns the tick that starts now and moves the clock past it.</summary>
     public (long Index, DateTimeOffset Instant) NextTick()
     {
         var tick = (TickIndex, CurrentInstant);

@@ -11,7 +11,7 @@ task_id: TASK-021
 title: Convention review - audit of the whole source against the house rules (Isaac)
 type: review
 priority: high
-status: draft
+status: done
 created: 2026-08-18
 updated: 2026-08-18
 
@@ -124,5 +124,5 @@ below shifts by one.
 ## Requirements
 
 - [x] RF-01: Findings recorded as fact with counts and names, no code changed.
-- [ ] RF-02: Reviewer decision on F3 (strict vs fluent exception) recorded here.
-- [ ] RF-03: Follow-up tasks approved/reordered by the reviewer.
+- [x] RF-02: DECIDED - the fluent exception (TASK-018 directive 6): pure + reads as prose keeps its preposition; everything else gets its verb.
+- [x] RF-03: Reordered by the reviewer in action - god methods went first (TASK-022); weather cluster follows as TASK-023.
