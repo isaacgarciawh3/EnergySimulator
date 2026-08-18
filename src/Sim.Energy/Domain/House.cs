@@ -1,14 +1,12 @@
-using Sim.Energy.Contracts;
-
 namespace Sim.Energy.Domain;
 
 /// <summary>
 /// Entity inside the Neighbourhood aggregate. Invariant: base household
-/// consumption is always present — a house without it is not representable.
+/// consumption is always present, so a house without it cannot be constructed.
 /// </summary>
 public sealed class House
 {
-    public House(string id, IEnumerable<IEnergyAsset> assets)
+    public House(string id, IEnumerable<Asset> assets)
     {
         Id = id;
         Assets = assets.ToList();
@@ -17,5 +15,5 @@ public sealed class House
     }
 
     public string Id { get; }
-    public IReadOnlyList<IEnergyAsset> Assets { get; }
+    public IReadOnlyList<Asset> Assets { get; }
 }

@@ -1,10 +1,13 @@
-namespace Sim.SharedKernel;
+namespace Sim.Simulation.Domain;
 
 /// <summary>
 /// Pure hash-based noise (SplitMix64 finalizer): the same (seed, stream, point)
-/// always yields the same value in [0,1). Stateless by design — reproducibility
-/// does not depend on call order, so adding an asset never shifts another
-/// asset's random sequence.
+/// always yields the same value in [0,1). Stateless, so reproducibility does not
+/// depend on call order and adding an asset never shifts another asset's
+/// sequence.
+///
+/// This lives in Simulation because randomness is how we FAKE reality. A
+/// telemetry feed would have no use for it.
 /// </summary>
 public static class DeterministicNoise
 {
@@ -17,7 +20,6 @@ public static class DeterministicNoise
         return (x >> 11) * (1.0 / (1UL << 53));
     }
 
-    /// <summary>FNV-1a over a stable identity string, used to derive a per-entity noise stream.</summary>
     public static ulong StreamOf(string identity)
     {
         var hash = 14695981039346656037UL;

@@ -11,9 +11,9 @@ public interface ISimulationConfigurationStore
 }
 
 /// <summary>
-/// Driven port: the projection store (CQRS read side). SQLite adapter today;
-/// a real deployment would point this at Redis or a time-series database
-/// without the domain noticing.
+/// Driven port: the read-side projection. SQLite adapter today; a real
+/// deployment would point this at a time-series store without the domain
+/// noticing.
 /// </summary>
 public interface IProjectionStore
 {
@@ -22,18 +22,3 @@ public interface IProjectionStore
     IReadOnlyList<SeriesPoint> LoadWindow(DateTimeOffset from);
     void Reset();
 }
-
-/// <summary>
-/// Driven port standing in for the event stream we did NOT build (ADR-004).
-/// Today the adapter is an in-process synchronous dispatch; the signature is
-/// already the one a broker publisher would have, so replacing it is an
-/// infrastructure change, not a domain change.
-/// </summary>
-public interface ITickBus
-{
-    void Publish(TickCompleted tick);
-    void Subscribe(Action<TickCompleted> handler);
-}
-
-/// <summary>The single integration event of the system.</summary>
-public sealed record TickCompleted(DashboardSnapshot Snapshot, SeriesPoint Point);

@@ -2,7 +2,6 @@ using Sim.Api;
 using Sim.Api.Endpoints;
 using Sim.Application.Engine;
 using Sim.Application.Ports;
-using Sim.Infrastructure.Messaging;
 using Sim.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,7 +11,6 @@ var databasePath = builder.Configuration["Simulation:DatabasePath"] ?? "sim.db";
 builder.Services.AddSingleton(new SqliteConnectionFactory(databasePath));
 builder.Services.AddSingleton<ISimulationConfigurationStore, SqliteConfigurationStore>();
 builder.Services.AddSingleton<IProjectionStore, SqliteProjectionStore>();
-builder.Services.AddSingleton<ITickBus, InProcessTickBus>();
 builder.Services.AddSingleton<SimulationEngine>();
 builder.Services.AddHostedService<SimulationWorker>();
 

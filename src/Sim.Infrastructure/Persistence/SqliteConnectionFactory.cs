@@ -44,14 +44,22 @@ public sealed class SqliteConnectionFactory
                 ticks_per_second  REAL    NOT NULL,
                 pv_share          REAL    NOT NULL,
                 heat_pump_share   REAL    NOT NULL,
-                home_ev_share     REAL    NOT NULL
+                home_ev_share     REAL    NOT NULL,
+                battery_capacity_kwh   REAL    NOT NULL DEFAULT 250,
+                battery_max_power_kw   REAL    NOT NULL DEFAULT 80,
+                battery_efficiency     REAL    NOT NULL DEFAULT 0.9,
+                peak_threshold_kw      REAL    NOT NULL DEFAULT 45,
+                battery_enabled        INTEGER NOT NULL DEFAULT 1
             );
 
             CREATE TABLE IF NOT EXISTS tick_history (
                 instant         TEXT PRIMARY KEY,
                 net_kw          REAL NOT NULL,
                 consumption_kw  REAL NOT NULL,
-                generation_kw   REAL NOT NULL
+                generation_kw   REAL NOT NULL,
+                net_no_battery_kw REAL NOT NULL DEFAULT 0,
+                battery_kw        REAL NOT NULL DEFAULT 0,
+                soc_percent       REAL NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS meter_totals (

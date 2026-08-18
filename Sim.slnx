@@ -3,6 +3,7 @@
     <Project Path="src/Sim.Accounting/Sim.Accounting.csproj" />
     <Project Path="src/Sim.Api/Sim.Api.csproj" />
     <Project Path="src/Sim.Application/Sim.Application.csproj" />
+    <Project Path="src/Sim.Control/Sim.Control.csproj" />
     <Project Path="src/Sim.Energy/Sim.Energy.csproj" />
     <Project Path="src/Sim.Infrastructure/Sim.Infrastructure.csproj" />
     <Project Path="src/Sim.SharedKernel/Sim.SharedKernel.csproj" />
