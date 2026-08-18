@@ -20,7 +20,7 @@ namespace Sim.Architecture.Tests;
 public sealed class BoundedContextDependencyTests
 {
     private static readonly Assembly Energy = typeof(Sim.Energy.Domain.Asset).Assembly;
-    private static readonly Assembly Simulation = typeof(Sim.Simulation.NeighbourhoodSimulator).Assembly;
+    private static readonly Assembly Simulation = typeof(Sim.Simulation.Domain.SimulationRun).Assembly;
     private static readonly Assembly Accounting = typeof(Sim.Accounting.Domain.EnergyLedger).Assembly;
     private static readonly Assembly Control = typeof(Sim.Control.Domain.GridState).Assembly;
 

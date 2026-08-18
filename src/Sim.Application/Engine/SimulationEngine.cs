@@ -5,7 +5,7 @@ using Sim.Application.ReadModels;
 using Sim.Control.Domain;
 using Sim.Energy.Domain;
 using Sim.SharedKernel;
-using Sim.Simulation;
+using Sim.Simulation.Domain;
 
 namespace Sim.Application.Engine;
 
@@ -34,13 +34,12 @@ public sealed class SimulationEngine(
 
     private SimulationConfiguration _configuration = SimulationConfiguration.Default;
     private Neighbourhood _neighbourhood = null!;
-    private NeighbourhoodSimulator _simulator = null!;
-    private BatterySimulator? _battery;
+    private SimulationRun _run = null!;
     private PeakShavingStrategy _strategy = null!;
     private EnergyLedger _ledger = null!;
 
     private GridSettlement? _settlement;
-    private Simulation.Domain.SimulationTick? _tick;
+    private TickTelemetry? _telemetry;
     private double _netWithoutBatteryKw, _lastBatteryKw;
     private double _peakWith, _peakWithout, _chargedKwh, _dischargedKwh;
     private DashboardSnapshot? _snapshot;
@@ -95,9 +94,8 @@ public sealed class SimulationEngine(
             ConfigurationOrigin = configurations.Exists() ? "stored" : "configuration file";
 
             _neighbourhood = NeighbourhoodBuilder.Build(configuration, _parameters);
-            _simulator = new NeighbourhoodSimulator(_neighbourhood, unchecked((ulong)configuration.Seed),
+            _run = new SimulationRun(_neighbourhood, unchecked((ulong)configuration.Seed),
                 configuration.StartInstant, configuration.TickDuration, _parameters.ToProfiles());
-            _battery = _neighbourhood.Battery is { } spec ? new BatterySimulator(spec) : null;
             _strategy = new PeakShavingStrategy(
                 configuration.PeakShavingThresholdKw > 0 ? configuration.PeakShavingThresholdKw : null,
                 configuration.BatteryRoundTripEfficiency);
@@ -136,41 +134,40 @@ public sealed class SimulationEngine(
 
     private void AdvanceOnce()
     {
-        // 1. Simulation reports what every non-storage meter is doing.
-        var (tick, readings) = _simulator.Advance();
-        _tick = tick;
+        // 1. The run advances: one reading per non-storage meter.
+        var telemetry = _telemetry = _run.Advance();
 
         // 2. The load the neighbourhood would have had with no battery at all.
-        _netWithoutBatteryKw = readings.Sum(r => r.Power.Value);
+        _netWithoutBatteryKw = telemetry.Readings.Sum(r => r.Power.Value);
 
         // 3. Control decides. It sees a number and the battery's limits - nothing else.
-        var all = new List<PowerReading>(readings);
+        var all = new List<PowerReading>(telemetry.Readings);
         _lastBatteryKw = 0;
-        if (_battery is { } battery && _neighbourhood.Battery is { } spec)
+        if (_run.Storage is { } storage && _neighbourhood.Battery is { } spec)
         {
             var state = new GridState(new Kilowatts(_netWithoutBatteryKw),
-                battery.StateOfChargeKwh, spec.CapacityKwh, spec.MaxPowerKw);
-            var reading = battery.Apply(_strategy.Decide(state, tick.Duration), tick.Instant, tick.Duration);
+                storage.StateOfChargeKwh, spec.CapacityKwh, spec.MaxPowerKw);
+            var reading = _run.ApplyStorageSetpoint(_strategy.Decide(state, telemetry.Duration));
             _lastBatteryKw = reading.Power.Value;
-            var energy = Math.Abs(_lastBatteryKw) * tick.Duration.TotalHours;
+            var energy = Math.Abs(_lastBatteryKw) * telemetry.Duration.TotalHours;
             if (_lastBatteryKw > 0) _chargedKwh += energy; else _dischargedKwh += energy;
             all.Add(reading);
         }
 
         // 4. Accounting settles everything, battery included - it is just another meter.
-        _settlement = _ledger.Post(tick.Instant, tick.Duration, all);
+        _settlement = _ledger.Post(telemetry.Instant, telemetry.Duration, all);
 
         _peakWith = Math.Max(_peakWith, _settlement.NetPower.Value);
         _peakWithout = Math.Max(_peakWithout, _netWithoutBatteryKw);
 
-        projections.AppendTick(new SeriesPoint(tick.Instant,
+        projections.AppendTick(new SeriesPoint(telemetry.Instant,
             _settlement.NetPower.Value, _settlement.Consumption.Value, _settlement.Generation.Value,
-            _netWithoutBatteryKw, _lastBatteryKw, _battery?.StateOfChargePercent ?? 0));
+            _netWithoutBatteryKw, _lastBatteryKw, _run.Storage?.StateOfChargePercent ?? 0));
     }
 
     private DashboardSnapshot BuildSnapshot()
     {
-        var tick = _tick!;
+        var telemetry = _telemetry!;
         var settlement = _settlement!;
         var accounts = _ledger.Accounts.ToDictionary(a => a.MeterId);
 
@@ -192,27 +189,27 @@ public sealed class SimulationEngine(
         var chargers = _neighbourhood.PublicChargePoints.Select(c =>
         {
             accounts.TryGetValue(c.MeterId, out var acc);
-            return new ChargerView(c.OwnerId, _simulator.IsBusy(c.MeterId),
+            return new ChargerView(c.OwnerId, telemetry.OccupiedChargePoints.Contains(c.MeterId),
                 Math.Round(acc?.LastPower.Value ?? 0, 3), Math.Round(acc?.Consumed.Value ?? 0, 2));
         }).ToList();
 
         BatteryView? batteryView = null;
-        if (_battery is { } battery && _neighbourhood.Battery is not null)
+        if (_run.Storage is { } storage && _neighbourhood.Battery is not null)
             batteryView = new BatteryView(
-                Math.Round(_lastBatteryKw, 3), Math.Round(battery.StateOfChargeKwh, 2), battery.CapacityKwh,
-                Math.Round(battery.StateOfChargePercent, 1),
+                Math.Round(_lastBatteryKw, 3), Math.Round(storage.StateOfChargeKwh, 2), storage.CapacityKwh,
+                Math.Round(storage.StateOfChargePercent, 1),
                 _lastBatteryKw > 0.01 ? "charging" : _lastBatteryKw < -0.01 ? "discharging" : "idle",
                 _strategy.Name, Math.Round(_chargedKwh, 2), Math.Round(_dischargedKwh, 2));
 
         return new DashboardSnapshot(
-            tick.TickIndex, tick.Instant, tick.Weather.Season.ToString(), Math.Round(tick.Weather.TemperatureC, 1),
-            Math.Round(tick.Weather.CloudCover, 3), Math.Round(tick.Weather.IrradianceFactor, 3),
+            telemetry.TickIndex, telemetry.Instant, telemetry.Weather.Season.ToString(), Math.Round(telemetry.Weather.TemperatureC, 1),
+            Math.Round(telemetry.Weather.CloudCover, 3), Math.Round(telemetry.Weather.IrradianceFactor, 3),
             Math.Round(settlement.NetPower.Value, 3), Math.Round(settlement.Consumption.Value, 3),
             Math.Round(settlement.Generation.Value, 3), Math.Round(settlement.Import.Value, 3),
             Math.Round(settlement.Export.Value, 3),
             Math.Round(_ledger.TotalConsumed.Value, 2), Math.Round(_ledger.TotalGenerated.Value, 2),
             Math.Round(_ledger.TotalImported.Value, 2), Math.Round(_ledger.TotalExported.Value, 2),
-            meters, houses, chargers, projections.LoadWindow(tick.Instant - TimeSpan.FromHours(24)),
+            meters, houses, chargers, projections.LoadWindow(telemetry.Instant - TimeSpan.FromHours(24)),
             Running, _configuration.TicksPerSecond, _configuration.TickMinutes, _configuration.Seed,
             batteryView, Math.Round(_netWithoutBatteryKw, 3), _configuration.PeakShavingThresholdKw,
             Math.Round(_peakWith, 2), Math.Round(_peakWithout, 2));

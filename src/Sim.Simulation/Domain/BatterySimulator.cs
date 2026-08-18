@@ -2,7 +2,7 @@ using Sim.Control.Domain;
 using Sim.Energy.Domain;
 using Sim.SharedKernel;
 
-namespace Sim.Simulation;
+namespace Sim.Simulation.Domain;
 
 /// <summary>
 /// Simulates how the battery physically responds to a command: it clamps the
