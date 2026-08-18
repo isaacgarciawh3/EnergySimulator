@@ -1,0 +1,11 @@
+services:
+  simulator:
+    build: .
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # aspnet:10.0 image ships no curl/wget; use bash /dev/tcp
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
