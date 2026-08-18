@@ -142,7 +142,7 @@ clock and 24h chart are NEVER cut.
 
 ## Acceptance Criteria
 
-1. Fresh clone + `docker compose up` → dashboard on localhost:8080 animating
+1. Fresh clone + `docker compose up` → dashboard on localhost:8181 animating
    within 60s, no manual steps.
 2. Same seed run twice → identical readings tick for tick (test proves it).
 3. Property test proves energy conservation on every generated scenario.

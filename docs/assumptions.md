@@ -35,13 +35,23 @@ change it. See ADR-0003.
 
 ## A-003 - PV offsets local load first, surplus is exported
 
-**Derived** from the sign convention in ADR-0002. Assets sit behind their house
-meter and the house meter is the signed sum of its assets, so generation cancels
-consumption locally before anything reaches the grid. Only when the whole
-neighbourhood nets negative does the surplus become an export.
+**Derived** from the sign convention in ADR-0002.
 
-Consequence: a house with PV can be a net exporter while the neighbourhood as a
-whole is still importing. Both figures are reported separately.
+Stated precisely, because an earlier version of this document overclaimed:
+settlement happens **once, at the neighbourhood level**. Every reading in the
+interval is summed; if the total is positive the neighbourhood imports, if
+negative it exports. There is no separate per-house netting step in the code,
+and no house-level import or export figure is produced.
+
+What is true is that PV cancels local consumption *within that single sum*,
+because generation is negative and consumption positive. So a house's own meters
+can net negative while the neighbourhood as a whole still imports - the
+dashboard shows that per-house net figure - but the export decision is only ever
+made once, for the whole neighbourhood.
+
+The distinction matters for anyone extending this: introducing per-house billing
+or a per-house grid connection would require a real netting step that does not
+currently exist.
 
 ## A-004 - EV charging behaviour
 
@@ -114,6 +124,37 @@ and there is no persistence between days beyond what the sinusoids give.
 
 ---
 
+## A-010 - Neighbourhood battery
+
+**Modelling choice.** One shared battery for the whole neighbourhood: 250 kWh
+capacity, 80 kW maximum charge and discharge, 90 per cent round-trip efficiency,
+starting half charged so it has something to give on the first peak.
+
+Losses are applied as the square root of the round-trip efficiency on each leg,
+so charging costs more at the meter than the cells store, and discharging
+delivers less than the cells give up. The battery is metered like any other
+asset, so its losses appear as consumption and the energy conservation invariant
+still holds exactly.
+
+Known simplifications: no degradation, no cycle counting, no temperature
+dependence, no minimum state of charge reserve, and it can go from full
+discharge to full charge in one interval with no ramp limit.
+
+## A-011 - Peak shaving control
+
+**Modelling choice**, and the second attempt. The strategy discharges above the
+80th percentile and recharges below the 40th percentile of load seen over a
+rolling 24 hour window.
+
+The first attempt used a fixed 45 kW threshold and measurably did not work - the
+battery drained to empty before the evening peak and reduced the peak by 0 kW.
+That failure and the fix are recorded in ADR-0010 rather than quietly patched,
+because the reason it failed is the interesting part: a fixed threshold encodes a
+guess about the load, and the guess was wrong.
+
+The controller is reactive, not predictive. It responds to the distribution it
+has already observed, so the first simulated day is a warm-up.
+
 ## Open points
 
 These are genuinely undecided. They are recorded here rather than resolved
@@ -126,14 +167,16 @@ consistency boundary. The alternative, `House` as its own aggregate root, is
 equally defensible and would be the right call the moment houses become
 independently editable or independently persisted.
 
-**OP-02 - Stringly-typed category crossing the boundary.** `EnergyEntry.Category`
-is currently `AssetType.ToString()`. That is an Energy enum leaking into
-Accounting through the very layer meant to prevent it. The clean fix is an
-Accounting-owned `MeterCategory` enum, mapped explicitly in the translator.
+**OP-02 - RESOLVED 2026-08-18.** The stringly-typed category no longer crosses
+the boundary. Accounting takes `PowerReading` and classifies by the sign of the
+reading, so it has no asset vocabulary at all. The dashboard's per-type
+breakdown is now a read-time join in the application layer. The defect was
+removed by fixing the boundary rather than by patching the symptom.
 
-**OP-03 - Unused storage concept.** `MeterKind.Storage` exists with nothing
-implementing it. Either it is a declared extension point for batteries or it is
-speculative generality and should be deleted.
+**OP-03 - RESOLVED 2026-08-18.** `MeterKind` was deleted along with the rest of
+Accounting's asset vocabulary. Storage arrived for real as `Battery`, and it
+needed no enum in Accounting: a battery is just a meter whose reading changes
+sign.
 
 **OP-04 - Sequential tick loop.** Assets hold session state, so measurement is
 strictly sequential. The "parallel per house up to the grid settlement barrier"

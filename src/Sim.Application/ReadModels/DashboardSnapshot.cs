@@ -24,9 +24,16 @@ public sealed record DashboardSnapshot(
     bool Running,
     double TicksPerSecond,
     int TickMinutes,
-    long Seed);
+    long Seed,
+    BatteryView? Battery,
+    double NetPowerWithoutBatteryKw,
+    double PeakShavingThresholdKw,
+    double PeakWithBatteryKw,
+    double PeakWithoutBatteryKw);
+
+public sealed record BatteryView(double PowerKw, double StateOfChargeKwh, double CapacityKwh, double StateOfChargePercent, string Mode, string Strategy, double ChargedKwh, double DischargedKwh);
 
 public sealed record MeterTotalView(string MeterId, string OwnerId, string Category, double ConsumedKwh, double GeneratedKwh, double NetKwh, double LastPowerKw);
 public sealed record HouseView(string Id, IReadOnlyList<string> Assets, double NetPowerKw, double NetKwh);
 public sealed record ChargerView(string Id, bool Busy, double PowerKw, double ConsumedKwh);
-public sealed record SeriesPoint(DateTimeOffset Instant, double NetKw, double ConsumptionKw, double GenerationKw);
+public sealed record SeriesPoint(DateTimeOffset Instant, double NetKw, double ConsumptionKw, double GenerationKw, double NetWithoutBatteryKw = 0, double BatteryKw = 0, double SocPercent = 0);

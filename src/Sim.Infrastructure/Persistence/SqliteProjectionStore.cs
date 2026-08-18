@@ -19,15 +19,19 @@ public sealed class SqliteProjectionStore(SqliteConnectionFactory factory) : IPr
         using var connection = factory.Open();
         using var command = connection.CreateCommand();
         command.CommandText = """
-            INSERT INTO tick_history (instant, net_kw, consumption_kw, generation_kw)
-            VALUES ($instant, $net, $cons, $gen)
-            ON CONFLICT(instant) DO UPDATE SET net_kw = $net, consumption_kw = $cons, generation_kw = $gen;
+            INSERT INTO tick_history (instant, net_kw, consumption_kw, generation_kw, net_no_battery_kw, battery_kw, soc_percent)
+            VALUES ($instant, $net, $cons, $gen, $nonb, $bat, $soc)
+            ON CONFLICT(instant) DO UPDATE SET net_kw = $net, consumption_kw = $cons, generation_kw = $gen,
+                net_no_battery_kw = $nonb, battery_kw = $bat, soc_percent = $soc;
             DELETE FROM tick_history WHERE instant < $cutoff;
             """;
         command.Parameters.AddWithValue("$instant", point.Instant.ToString("O"));
         command.Parameters.AddWithValue("$net", point.NetKw);
         command.Parameters.AddWithValue("$cons", point.ConsumptionKw);
         command.Parameters.AddWithValue("$gen", point.GenerationKw);
+        command.Parameters.AddWithValue("$nonb", point.NetWithoutBatteryKw);
+        command.Parameters.AddWithValue("$bat", point.BatteryKw);
+        command.Parameters.AddWithValue("$soc", point.SocPercent);
         command.Parameters.AddWithValue("$cutoff", point.Instant.AddHours(-RetainedHours).ToString("O"));
         command.ExecuteNonQuery();
     }
@@ -66,7 +70,7 @@ public sealed class SqliteProjectionStore(SqliteConnectionFactory factory) : IPr
     {
         using var connection = factory.Open();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT instant, net_kw, consumption_kw, generation_kw FROM tick_history WHERE instant >= $from ORDER BY instant;";
+        command.CommandText = "SELECT instant, net_kw, consumption_kw, generation_kw, net_no_battery_kw, battery_kw, soc_percent FROM tick_history WHERE instant >= $from ORDER BY instant;";
         command.Parameters.AddWithValue("$from", from.ToString("O"));
 
         var points = new List<SeriesPoint>();
@@ -74,7 +78,8 @@ public sealed class SqliteProjectionStore(SqliteConnectionFactory factory) : IPr
         while (reader.Read())
             points.Add(new SeriesPoint(
                 DateTimeOffset.Parse(reader.GetString(0), null, System.Globalization.DateTimeStyles.RoundtripKind),
-                reader.GetDouble(1), reader.GetDouble(2), reader.GetDouble(3)));
+                reader.GetDouble(1), reader.GetDouble(2), reader.GetDouble(3),
+                reader.GetDouble(4), reader.GetDouble(5), reader.GetDouble(6)));
         return points;
     }
 

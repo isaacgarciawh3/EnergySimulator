@@ -1,17 +1,13 @@
-using Sim.Simulation.Contracts;
+using Sim.Simulation.Domain.Weather;
 
 namespace Sim.Simulation.Domain;
 
-/// <summary>
-/// AGGREGATE ROOT of the Simulation context. Owns simulated time and the
-/// environment — nothing else in the system is allowed to know what time it is.
-/// It knows nothing about houses, assets or kilowatt-hours.
-/// </summary>
+/// <summary>Owns simulated time. Nothing else in the system decides what time it is.</summary>
 public sealed class SimulationRun
 {
     private readonly WeatherModel _weather;
 
-    public SimulationRun(ulong seed, DateTimeOffset start, TimeSpan tickDuration)
+    public SimulationRun(ulong seed, DateTimeOffset start, TimeSpan tickDuration, WeatherParameters? weather = null)
     {
         if (tickDuration <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(tickDuration), "Tick duration must be positive.");
@@ -19,7 +15,7 @@ public sealed class SimulationRun
         StartedAt = start;
         CurrentInstant = start;
         TickDuration = tickDuration;
-        _weather = new WeatherModel(seed);
+        _weather = new WeatherModel(seed, weather);
     }
 
     public ulong Seed { get; }
@@ -28,14 +24,11 @@ public sealed class SimulationRun
     public TimeSpan TickDuration { get; }
     public long TickIndex { get; private set; }
 
-    /// <summary>Advances one tick and publishes the environment for that tick.</summary>
-    public TickEnvironment Advance()
+    public SimulationTick Advance()
     {
-        var w = _weather.At(CurrentInstant);
-        var env = new TickEnvironment(TickIndex, CurrentInstant, TickDuration,
-            w.TemperatureC, w.CloudCover, w.IrradianceFactor, w.Season.ToString());
+        var tick = new SimulationTick(TickIndex, CurrentInstant, TickDuration, _weather.At(CurrentInstant), Seed);
         TickIndex++;
         CurrentInstant += TickDuration;
-        return env;
+        return tick;
     }
 }

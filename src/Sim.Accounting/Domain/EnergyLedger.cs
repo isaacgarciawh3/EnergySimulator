@@ -1,13 +1,16 @@
-using Sim.Accounting.Contracts;
 using Sim.SharedKernel;
 
 namespace Sim.Accounting.Domain;
 
 /// <summary>
-/// AGGREGATE ROOT of the Accounting context. Pure arithmetic over postings:
-/// cumulative energy per meter since simulation start, plus settlement with the
-/// grid. It has no idea how the numbers were produced — swap the whole physics
-/// engine and this class is untouched (ADR-001).
+/// AGGREGATE ROOT of the Accounting context. It takes readings and does
+/// arithmetic: cumulative energy per meter since the simulation started, and
+/// settlement against the grid.
+///
+/// It knows nothing about houses, heat pumps, weather or batteries. A meter
+/// either drew power or delivered it, and the SIGN of the reading says which.
+/// That is the entire vocabulary this context needs, which is why swapping the
+/// simulation for real telemetry does not touch a line of it.
 /// </summary>
 public sealed class EnergyLedger
 {
@@ -20,19 +23,18 @@ public sealed class EnergyLedger
 
     public IReadOnlyCollection<MeterAccount> Accounts => _accounts.Values;
 
-    /// <summary>Posts one interval and returns its grid settlement.</summary>
-    public GridSettlement Post(DateTimeOffset instant, TimeSpan duration, IReadOnlyList<EnergyEntry> entries)
+    public GridSettlement Post(DateTimeOffset instant, TimeSpan duration, IReadOnlyList<PowerReading> readings)
     {
         double consumption = 0, generation = 0;
 
-        foreach (var entry in entries)
+        foreach (var reading in readings)
         {
-            if (!_accounts.TryGetValue(entry.MeterId, out var account))
-                _accounts[entry.MeterId] = account = new MeterAccount(entry.MeterId, entry.OwnerId, entry.Category);
-            account.Post(entry);
+            if (!_accounts.TryGetValue(reading.MeterId, out var account))
+                _accounts[reading.MeterId] = account = new MeterAccount(reading.MeterId);
+            account.Post(reading, duration);
 
-            if (entry.Power.Value >= 0) consumption += entry.Power.Value;
-            else generation -= entry.Power.Value;
+            if (reading.Power.Value >= 0) consumption += reading.Power.Value;
+            else generation -= reading.Power.Value;
         }
 
         var net = consumption - generation;
@@ -50,22 +52,20 @@ public sealed class EnergyLedger
     }
 }
 
-/// <summary>Entity inside the ledger: cumulative energy for one meter since simulation start.</summary>
-public sealed class MeterAccount(string meterId, string ownerId, string category)
+/// <summary>Cumulative energy for one meter since the simulation started.</summary>
+public sealed class MeterAccount(string meterId)
 {
     public string MeterId { get; } = meterId;
-    public string OwnerId { get; } = ownerId;
-    public string Category { get; } = category;
-
     public KilowattHours Consumed { get; private set; }
     public KilowattHours Generated { get; private set; }
     public KilowattHours Net => Consumed - Generated;
     public Kilowatts LastPower { get; private set; }
 
-    internal void Post(EnergyEntry entry)
+    internal void Post(PowerReading reading, TimeSpan duration)
     {
-        if (entry.Energy.Value >= 0) Consumed += entry.Energy;
-        else Generated += new KilowattHours(-entry.Energy.Value);
-        LastPower = entry.Power;
+        var energy = reading.Power.Over(duration);
+        if (energy.Value >= 0) Consumed += energy;
+        else Generated += new KilowattHours(-energy.Value);
+        LastPower = reading.Power;
     }
 }

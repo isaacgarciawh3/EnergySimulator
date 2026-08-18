@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Neighbourhood Energy Simulation</title>
+<link rel="stylesheet" href="app.css"/>
+</head>
+<body>
+<div id="sky" class="sky"></div>
+
+<header class="bar">
+  <div class="brand">
+    <span class="dot live"></span>
+    <div>
+      <h1>Neighbourhood Energy Simulation</h1>
+      <p class="sub">30 houses &middot; 6 public chargers &middot; deterministic, seed <b id="seed">&mdash;</b> &middot; tick <b id="tickIndex">&mdash;</b></p>
+    </div>
+  </div>
+  <div class="clock">
+    <div class="date" id="date">&mdash;</div>
+    <div class="time" id="time">--:--</div>
+  </div>
+  <div class="weather">
+    <div class="wx-main"><span id="wxIcon" class="wx-icon">&#9728;</span><span id="temp">&mdash;</span></div>
+    <div class="wx-meta"><span id="season" class="badge">&mdash;</span><span id="cloud" class="muted">&mdash;</span></div>
+  </div>
+  <div class="controls">
+    <button id="toggle" class="btn primary" type="button">Pause</button>
+    <label class="speed">
+      <span class="row">Speed <b id="speedVal">&mdash;</b>
+        <input id="speed" type="range" min="1" max="60" step="1" value="8" title="Ticks per second. Applying a new speed rewrites the configuration, which restarts the run."/>
+      </span>
+      <span class="warn-note">changing speed restarts the run</span>
+    </label>
+    <a class="btn" href="config.html">Configuration</a>
+  </div>
+</header>
+
+<main>
+  <!-- ---------------------------------------------------------------- -->
+  <section class="stats">
+    <div class="stat big" id="netCard">
+      <span class="label"><i class="key s1"></i>Neighbourhood net power</span>
+      <span class="value"><b id="net">0.0</b><i>kW</i></span>
+      <span class="hint" id="netHint">&mdash;</span>
+    </div>
+    <div class="stat">
+      <span class="label"><i class="key s2"></i>Demand now</span>
+      <span class="value"><b id="cons">0.0</b><i>kW</i></span>
+      <span class="hint">battery charging included</span>
+    </div>
+    <div class="stat">
+      <span class="label"><i class="key s3"></i>Generation now</span>
+      <span class="value"><b id="gen">0.0</b><i>kW</i></span>
+      <span class="hint">PV + battery discharge</span>
+    </div>
+    <div class="stat">
+      <span class="label">Imported total</span>
+      <span class="value"><b id="imp">0</b><i>kWh</i></span>
+      <span class="hint">since simulation start</span>
+    </div>
+    <div class="stat">
+      <span class="label">Exported total</span>
+      <span class="value"><b id="exp">0</b><i>kWh</i></span>
+      <span class="hint">since simulation start</span>
+    </div>
+    <div class="stat">
+      <span class="label">Consumed / generated</span>
+      <span class="value"><b id="totals">0 / 0</b><i>kWh</i></span>
+      <span class="hint">since simulation start</span>
+    </div>
+  </section>
+
+  <!-- ---- peak shaving headline ------------------------------------- -->
+  <section class="panel hero">
+    <div class="panel-head">
+      <h2>Peak shaving result</h2>
+      <span class="muted" id="battStateBadge"></span>
+    </div>
+    <div class="peaks" id="peaks">
+      <div class="scope">
+        <h3>Since simulation start</h3>
+        <p class="scope-def">Highest interval ever reached in this run, counted from tick&nbsp;0. Resets when the configuration is saved.</p>
+        <div class="pair">
+          <div class="fig"><span class="k"><i class="key line s2"></i>Peak without battery</span><span class="v"><b id="pkStartWithout">&mdash;</b><i>kW</i></span></div>
+          <div class="fig"><span class="k"><i class="key line s1"></i>Peak with battery</span><span class="v"><b id="pkStartWith">&mdash;</b><i>kW</i></span></div>
+        </div>
+        <div class="delta none" id="pkStartDelta">&mdash;</div>
+      </div>
+      <div class="scope">
+        <h3>Last 24 simulated hours</h3>
+        <p class="scope-def">Highest interval inside the window plotted below. A different measurement from the one on the left &mdash; not the same number.</p>
+        <div class="pair">
+          <div class="fig"><span class="k"><i class="key line s2"></i>Peak without battery</span><span class="v"><b id="pkWinWithout">&mdash;</b><i>kW</i></span></div>
+          <div class="fig"><span class="k"><i class="key line s1"></i>Peak with battery</span><span class="v"><b id="pkWinWith">&mdash;</b><i>kW</i></span></div>
+        </div>
+        <div class="delta none" id="pkWinDelta">&mdash;</div>
+      </div>
+    </div>
+    <p class="panel-note" id="peakNote"></p>
+  </section>
+
+  <!-- ---- the 24h peak shaving chart -------------------------------- -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Net load on the grid connection, last 24 simulated hours</h2>
+      <div class="legend">
+        <span><i class="key line s2"></i>without battery</span>
+        <span><i class="key line s1"></i>with battery</span>
+        <span><i class="key wash s2"></i>shaved by discharge</span>
+        <span><i class="key wash s1"></i>added by charging</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" class="chart" tabindex="0" role="img"
+           aria-label="Net load over the last 24 simulated hours, with and without the neighbourhood battery."></svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <p class="panel-note">Positive is import from the grid, negative is export to it. The dashed line is the counterfactual: what the
+      grid connection would have carried with no battery installed. The shading between the two lines is the battery's whole effect.</p>
+    <details class="data-table">
+      <summary>Show the 24 h series as a table</summary>
+      <div class="table-wrap" style="margin-top:10px">
+        <table id="seriesTable"><thead><tr>
+          <th>Time (UTC)</th><th class="num">Without battery kW</th><th class="num">With battery kW</th>
+          <th class="num">Battery kW</th><th class="num">State of charge %</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <!-- ---- battery + demand/generation ------------------------------- -->
+  <section class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h2>Neighbourhood battery</h2><span class="muted" id="battMeter"></span></div>
+      <div id="batteryBody"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Demand and local generation, last 24 h</h2>
+        <div class="legend">
+          <span><i class="key s2"></i>demand</span>
+          <span><i class="key s3"></i>PV generation</span>
+        </div>
+      </div>
+      <div class="chart-wrap"><svg id="cgChart" class="chart" role="img"
+        aria-label="Household and charger demand against photovoltaic generation over the last 24 simulated hours."></svg></div>
+      <p class="panel-note">Battery excluded on purpose: its charging is not household demand and its discharge is not local generation.
+        Derived as demand&nbsp;=&nbsp;consumption&nbsp;&minus;&nbsp;battery&nbsp;charging, PV&nbsp;=&nbsp;generation&nbsp;&minus;&nbsp;battery&nbsp;discharge.</p>
+    </div>
+  </section>
+
+  <!-- ---- houses & chargers ----------------------------------------- -->
+  <section class="grid-2 wide-left">
+    <div class="panel">
+      <div class="panel-head"><h2>Houses</h2><span class="muted">orange = importing &middot; aqua = exporting</span></div>
+      <div id="houses" class="houses"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Public chargers</h2><span class="muted">6 shared points</span></div>
+      <div id="chargers" class="chargers"></div>
+    </div>
+  </section>
+
+  <!-- ---- meters ----------------------------------------------------- -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Cumulative energy per meter since simulation start</h2>
+      <input id="filter" class="filter" placeholder="filter meters, owners or types..." aria-label="Filter meters"/>
+    </div>
+    <div class="table-wrap">
+      <table id="meters"><thead><tr>
+        <th>Meter</th><th>Owner</th><th>Type</th>
+        <th class="num">Consumed kWh</th><th class="num">Generated kWh</th>
+        <th class="num">Net kWh</th><th class="num">Now kW</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,49 +1,57 @@
-using Sim.Accounting.Contracts;
 using Sim.Accounting.Domain;
 using Sim.Application.Configuration;
 using Sim.Application.Ports;
 using Sim.Application.ReadModels;
-using Sim.Application.Translation;
+using Sim.Control.Domain;
 using Sim.Energy.Domain;
-using Sim.Simulation.Domain;
+using Sim.SharedKernel;
+using Sim.Simulation;
 
 namespace Sim.Application.Engine;
 
 /// <summary>
-/// The orchestrating use case. It is the ONLY place where all three bounded
-/// contexts meet, and it holds one aggregate root from each:
+/// The orchestrating use case, and the only place the four contexts meet:
 ///
-///   SimulationRun (Simulation)  ->  what time is it, what is the weather
-///   Neighbourhood (Energy)      ->  given that, what power flows
-///   EnergyLedger  (Accounting)  ->  given those readings, what do the books say
+///   Energy      -> what exists (neighbourhood, houses, assets, battery)
+///   Simulation  -> what everything is doing right now, as PowerReading
+///   Control     -> what the battery SHOULD do about it
+///   Accounting  -> what all of that means for the books
 ///
-/// Each step's output is translated before it crosses into the next context.
+/// The ordering is the design. Non-storage assets are measured first, which
+/// gives the net load the neighbourhood would have had WITHOUT the battery.
+/// The controller sees that number and commands the battery. Both figures then
+/// exist naturally, which is what the peak-shaving visualisation needs.
 /// </summary>
 public sealed class SimulationEngine(
     ISimulationConfigurationStore configurations,
     IProjectionStore projections,
-    ITickBus bus)
+    SimulationParameters? parameters = null)
 {
+    private readonly SimulationParameters _parameters = parameters ?? new SimulationParameters();
     private readonly Lock _gate = new();
 
     private SimulationConfiguration _configuration = SimulationConfiguration.Default;
-    private SimulationRun _run = null!;
     private Neighbourhood _neighbourhood = null!;
+    private NeighbourhoodSimulator _simulator = null!;
+    private BatterySimulator? _battery;
+    private PeakShavingStrategy _strategy = null!;
     private EnergyLedger _ledger = null!;
-    private GridSettlement? _lastSettlement;
+
+    private GridSettlement? _settlement;
+    private Simulation.Domain.SimulationTick? _tick;
+    private double _netWithoutBatteryKw, _lastBatteryKw;
+    private double _peakWith, _peakWithout, _chargedKwh, _dischargedKwh;
     private DashboardSnapshot? _snapshot;
 
     public bool Running { get; private set; }
     public SimulationConfiguration Configuration => _configuration;
 
-    /// <summary>Boot: adopt the persisted configuration (seeded on first container start) and warm up.</summary>
     public void Start()
     {
         Apply(configurations.LoadOrSeedDefault(), persist: false);
         Running = true;
     }
 
-    /// <summary>Configuration page: rebuild the whole world from a new seed and restart.</summary>
     public void Reconfigure(SimulationConfiguration configuration)
     {
         Apply(configuration.Validated(), persist: true);
@@ -60,32 +68,32 @@ public sealed class SimulationEngine(
             _configuration = configuration;
             if (persist) configurations.Save(configuration);
 
-            var seed = unchecked((ulong)configuration.Seed);
-            _run = new SimulationRun(seed, configuration.StartInstant, configuration.TickDuration);
-            _neighbourhood = NeighbourhoodFactory.Create(seed,
-                new NeighbourhoodBlueprint(configuration.PvShare, configuration.HeatPumpShare, configuration.HomeEvShare));
+            _neighbourhood = NeighbourhoodBuilder.Build(configuration, _parameters);
+            _simulator = new NeighbourhoodSimulator(_neighbourhood, unchecked((ulong)configuration.Seed),
+                configuration.StartInstant, configuration.TickDuration, _parameters.ToProfiles());
+            _battery = _neighbourhood.Battery is { } spec ? new BatterySimulator(spec) : null;
+            _strategy = new PeakShavingStrategy(
+                configuration.PeakShavingThresholdKw > 0 ? configuration.PeakShavingThresholdKw : null,
+                configuration.BatteryRoundTripEfficiency);
             _ledger = new EnergyLedger();
-            _lastSettlement = null;
+            _peakWith = _peakWithout = _chargedKwh = _dischargedKwh = 0;
             projections.Reset();
 
-            // Warm start: replay 24 simulated hours so the chart is full and moving
-            // on the first paint. Cheap because the engine is deterministic and pure.
-            var warmupTicks = (int)(TimeSpan.FromHours(24) / configuration.TickDuration);
-            for (var i = 0; i < warmupTicks; i++) AdvanceOnce();
+            // Warm start: replay 24 simulated hours so the chart is full and the
+            // battery has a realistic state of charge on the first paint.
+            var warmup = (int)(TimeSpan.FromHours(24) / configuration.TickDuration);
+            for (var i = 0; i < warmup; i++) AdvanceOnce();
             _snapshot = BuildSnapshot();
         }
     }
 
-    /// <summary>One tick through all three contexts. Called by the background worker.</summary>
     public void Tick()
     {
         lock (_gate)
         {
             AdvanceOnce();
             var snapshot = _snapshot = BuildSnapshot();
-            var point = new SeriesPoint(snapshot.Instant, snapshot.NetPowerKw, snapshot.ConsumptionKw, snapshot.GenerationKw);
             projections.SaveMeterTotals(snapshot.Meters);
-            bus.Publish(new TickCompleted(snapshot, point));
         }
     }
 
@@ -96,31 +104,46 @@ public sealed class SimulationEngine(
 
     private void AdvanceOnce()
     {
-        // 1. Simulation context decides when we are and what the weather is.
-        var environment = _run.Advance();
+        // 1. Simulation reports what every non-storage meter is doing.
+        var (tick, readings) = _simulator.Advance();
+        _tick = tick;
 
-        // 2. Translate across the boundary, then let the Energy context measure.
-        var measurement = ContextTranslator.ToMeasurementContext(environment, _run.Seed);
-        var readings = _neighbourhood.Measure(measurement);
+        // 2. The load the neighbourhood would have had with no battery at all.
+        _netWithoutBatteryKw = readings.Sum(r => r.Power.Value);
 
-        // 3. Translate again, then let the Accounting context settle the books.
-        var entries = readings.Select(ContextTranslator.ToEnergyEntry).ToList();
-        _lastSettlement = _ledger.Post(environment.Instant, environment.Duration, entries);
-        _lastEnvironment = environment;
-        projections.AppendTick(new SeriesPoint(environment.Instant,
-            _lastSettlement.NetPower.Value, _lastSettlement.Consumption.Value, _lastSettlement.Generation.Value));
+        // 3. Control decides. It sees a number and the battery's limits - nothing else.
+        var all = new List<PowerReading>(readings);
+        _lastBatteryKw = 0;
+        if (_battery is { } battery && _neighbourhood.Battery is { } spec)
+        {
+            var state = new GridState(new Kilowatts(_netWithoutBatteryKw),
+                battery.StateOfChargeKwh, spec.CapacityKwh, spec.MaxPowerKw);
+            var reading = battery.Apply(_strategy.Decide(state, tick.Duration), tick.Instant, tick.Duration);
+            _lastBatteryKw = reading.Power.Value;
+            var energy = Math.Abs(_lastBatteryKw) * tick.Duration.TotalHours;
+            if (_lastBatteryKw > 0) _chargedKwh += energy; else _dischargedKwh += energy;
+            all.Add(reading);
+        }
+
+        // 4. Accounting settles everything, battery included - it is just another meter.
+        _settlement = _ledger.Post(tick.Instant, tick.Duration, all);
+
+        _peakWith = Math.Max(_peakWith, _settlement.NetPower.Value);
+        _peakWithout = Math.Max(_peakWithout, _netWithoutBatteryKw);
+
+        projections.AppendTick(new SeriesPoint(tick.Instant,
+            _settlement.NetPower.Value, _settlement.Consumption.Value, _settlement.Generation.Value,
+            _netWithoutBatteryKw, _lastBatteryKw, _battery?.StateOfChargePercent ?? 0));
     }
-
-    private Simulation.Contracts.TickEnvironment _lastEnvironment = null!;
 
     private DashboardSnapshot BuildSnapshot()
     {
-        var env = _lastEnvironment;
-        var settlement = _lastSettlement!;
+        var tick = _tick!;
+        var settlement = _settlement!;
         var accounts = _ledger.Accounts.ToDictionary(a => a.MeterId);
 
         var meters = _ledger.Accounts
-            .Select(a => new MeterTotalView(a.MeterId, a.OwnerId, a.Category,
+            .Select(a => new MeterTotalView(a.MeterId, OwnerOf(a.MeterId), CategoryOf(a.MeterId),
                 Math.Round(a.Consumed.Value, 3), Math.Round(a.Generated.Value, 3),
                 Math.Round(a.Net.Value, 3), Math.Round(a.LastPower.Value, 3)))
             .OrderBy(m => m.MeterId, StringComparer.Ordinal)
@@ -134,23 +157,45 @@ public sealed class SimulationEngine(
             return new HouseView(h.Id, h.Assets.Select(a => a.Type.ToString()).ToList(), Math.Round(power, 3), Math.Round(energy, 2));
         }).ToList();
 
-        var chargers = _neighbourhood.PublicChargers.Select(c =>
+        var chargers = _neighbourhood.PublicChargePoints.Select(c =>
         {
             accounts.TryGetValue(c.MeterId, out var acc);
-            return new ChargerView(c.OwnerId, c.Busy, Math.Round(acc?.LastPower.Value ?? 0, 3), Math.Round(acc?.Consumed.Value ?? 0, 2));
+            return new ChargerView(c.OwnerId, _simulator.IsBusy(c.MeterId),
+                Math.Round(acc?.LastPower.Value ?? 0, 3), Math.Round(acc?.Consumed.Value ?? 0, 2));
         }).ToList();
 
-        var window = projections.LoadWindow(env.Instant - TimeSpan.FromHours(24));
+        BatteryView? batteryView = null;
+        if (_battery is { } battery && _neighbourhood.Battery is not null)
+            batteryView = new BatteryView(
+                Math.Round(_lastBatteryKw, 3), Math.Round(battery.StateOfChargeKwh, 2), battery.CapacityKwh,
+                Math.Round(battery.StateOfChargePercent, 1),
+                _lastBatteryKw > 0.01 ? "charging" : _lastBatteryKw < -0.01 ? "discharging" : "idle",
+                _strategy.Name, Math.Round(_chargedKwh, 2), Math.Round(_dischargedKwh, 2));
 
         return new DashboardSnapshot(
-            env.TickIndex, env.Instant, env.Season, Math.Round(env.TemperatureC, 1),
-            Math.Round(env.CloudCover, 3), Math.Round(env.IrradianceFactor, 3),
+            tick.TickIndex, tick.Instant, tick.Weather.Season.ToString(), Math.Round(tick.Weather.TemperatureC, 1),
+            Math.Round(tick.Weather.CloudCover, 3), Math.Round(tick.Weather.IrradianceFactor, 3),
             Math.Round(settlement.NetPower.Value, 3), Math.Round(settlement.Consumption.Value, 3),
             Math.Round(settlement.Generation.Value, 3), Math.Round(settlement.Import.Value, 3),
             Math.Round(settlement.Export.Value, 3),
             Math.Round(_ledger.TotalConsumed.Value, 2), Math.Round(_ledger.TotalGenerated.Value, 2),
             Math.Round(_ledger.TotalImported.Value, 2), Math.Round(_ledger.TotalExported.Value, 2),
-            meters, houses, chargers, window, Running,
-            _configuration.TicksPerSecond, _configuration.TickMinutes, _configuration.Seed);
+            meters, houses, chargers, projections.LoadWindow(tick.Instant - TimeSpan.FromHours(24)),
+            Running, _configuration.TicksPerSecond, _configuration.TickMinutes, _configuration.Seed,
+            batteryView, Math.Round(_netWithoutBatteryKw, 3), _configuration.PeakShavingThresholdKw,
+            Math.Round(_peakWith, 2), Math.Round(_peakWithout, 2));
     }
+
+    private string OwnerOf(string meterId) =>
+        _neighbourhood.AllAssets.FirstOrDefault(a => a.MeterId == meterId)?.OwnerId
+        ?? (meterId == _neighbourhood.Battery?.MeterId ? "neighbourhood" : meterId);
+
+    /// <summary>
+    /// The dashboard wants a per-type breakdown, so the join from meter to asset
+    /// type happens HERE, at read time. It deliberately does not happen in the
+    /// ledger: Accounting must not carry asset vocabulary.
+    /// </summary>
+    private string CategoryOf(string meterId) =>
+        _neighbourhood.AllAssets.FirstOrDefault(a => a.MeterId == meterId)?.Type.ToString()
+        ?? (meterId == _neighbourhood.Battery?.MeterId ? "Battery" : "Unknown");
 }

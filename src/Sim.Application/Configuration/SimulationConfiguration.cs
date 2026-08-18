@@ -12,7 +12,12 @@ public sealed record SimulationConfiguration(
     double TicksPerSecond,
     double PvShare,
     double HeatPumpShare,
-    double HomeEvShare)
+    double HomeEvShare,
+    double BatteryCapacityKwh,
+    double BatteryMaxPowerKw,
+    double BatteryRoundTripEfficiency,
+    double PeakShavingThresholdKw,
+    bool BatteryEnabled)
 {
     public static readonly SimulationConfiguration Default = new(
         Seed: 20260818,
@@ -21,7 +26,12 @@ public sealed record SimulationConfiguration(
         TicksPerSecond: 8,
         PvShare: 0.40,
         HeatPumpShare: 0.30,
-        HomeEvShare: 0.20);
+        HomeEvShare: 0.20,
+        BatteryCapacityKwh: 250,
+        BatteryMaxPowerKw: 80,
+        BatteryRoundTripEfficiency: 0.90,
+        PeakShavingThresholdKw: 0,
+        BatteryEnabled: true);
 
     public TimeSpan TickDuration => TimeSpan.FromMinutes(TickMinutes);
 
@@ -32,5 +42,9 @@ public sealed record SimulationConfiguration(
         PvShare = Math.Clamp(PvShare, 0, 1),
         HeatPumpShare = Math.Clamp(HeatPumpShare, 0, 1),
         HomeEvShare = Math.Clamp(HomeEvShare, 0, 1),
+        BatteryCapacityKwh = Math.Clamp(BatteryCapacityKwh, 0, 100_000),
+        BatteryMaxPowerKw = Math.Clamp(BatteryMaxPowerKw, 0, 10_000),
+        BatteryRoundTripEfficiency = Math.Clamp(BatteryRoundTripEfficiency, 0.1, 1.0),
+        PeakShavingThresholdKw = Math.Clamp(PeakShavingThresholdKw, 0, 100_000),
     };
 }

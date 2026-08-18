@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Configuration &middot; Neighbourhood Energy Simulation</title>
+<link rel="stylesheet" href="app.css"/>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>Simulation configuration</h1>
+      <p class="sub">The whole simulation is a pure function of this record &mdash; same values, same run, every time.</p>
+    </div>
+  </div>
+  <div class="controls">
+    <a class="btn primary" href="index.html">&larr; Back to the dashboard</a>
+  </div>
+</header>
+
+<main class="page-narrow">
+
+  <div class="notice locked">
+    <b>Fixed by the assignment, not by this page.</b> The neighbourhood always has exactly
+    <b>30 houses</b> and exactly <b>6 public charge points</b>. Those two numbers are stated as constraints of the
+    problem, so they are enforced in the domain model (<code>Neighbourhood</code> rejects any other count) rather than
+    exposed as settings. Everything below is a genuine setting.
+  </div>
+
+  <form id="form" autocomplete="off">
+
+    <!-- ---- determinism & clock ------------------------------------- -->
+    <section class="panel">
+      <div class="panel-head"><h2>Determinism and clock</h2></div>
+      <fieldset class="form-grid">
+        <div class="field">
+          <label for="seed">Seed</label>
+          <div class="input-row">
+            <input id="seed" type="number" step="1" required/>
+            <button id="randomise" class="btn" type="button">Randomise</button>
+          </div>
+          <span class="help">Drives the weather, the asset draw and every behaviour. The same seed always replays the same day.</span>
+          <span class="err" id="seedErr"></span>
+        </div>
+
+        <div class="field">
+          <label for="startInstant">Start instant (UTC)</label>
+          <input id="startInstant" type="datetime-local" required/>
+          <span class="help">The simulated clock starts here. The month sets the season, which drives heating and solar yield.</span>
+          <span class="err" id="startInstantErr"></span>
+        </div>
+
+        <div class="field">
+          <label for="tickMinutes">Tick length</label>
+          <input id="tickMinutes" type="number" min="1" max="60" step="1" required/>
+          <span class="help">Simulated minutes per tick, 1 to 60. 15 gives 96 intervals per simulated day.</span>
+          <span class="err" id="tickMinutesErr"></span>
+        </div>
+
+        <div class="field">
+          <label for="ticksPerSecond">Speed</label>
+          <input id="ticksPerSecond" type="number" min="0.5" max="240" step="0.5" required/>
+          <span class="help">Ticks played per real second, 0.5 to 240. At 8 with a 15 minute tick, one simulated day takes 12 seconds.</span>
+          <span class="err" id="ticksPerSecondErr"></span>
+        </div>
+      </fieldset>
+    </section>
+
+    <!-- ---- asset mix ------------------------------------------------ -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Asset mix across the 30 houses</h2>
+        <span class="muted">every house always has a base load</span>
+      </div>
+      <fieldset class="form-grid">
+        <div class="field">
+          <label for="pvShare">Solar PV share</label>
+          <div class="slider-row">
+            <input id="pvShare" type="range" min="0" max="100" step="1"/>
+            <output for="pvShare" id="pvShareOut">0 %</output>
+          </div>
+          <span class="help">Each house is drawn independently against this share, so the realised count varies a little with the seed.</span>
+        </div>
+        <div class="field">
+          <label for="heatPumpShare">Heat pump share</label>
+          <div class="slider-row">
+            <input id="heatPumpShare" type="range" min="0" max="100" step="1"/>
+            <output for="heatPumpShare" id="heatPumpShareOut">0 %</output>
+          </div>
+          <span class="help">Heat pumps respond to outside temperature, so they dominate the winter evening peak.</span>
+        </div>
+        <div class="field">
+          <label for="homeEvShare">Home EV charger share</label>
+          <div class="slider-row">
+            <input id="homeEvShare" type="range" min="0" max="100" step="1"/>
+            <output for="homeEvShare" id="homeEvShareOut">0 %</output>
+          </div>
+          <span class="help">Home chargers on top of the 6 public points, which are fixed.</span>
+        </div>
+      </fieldset>
+    </section>
+
+    <!-- ---- battery -------------------------------------------------- -->
+    <section class="panel">
+      <div class="panel-head"><h2>Neighbourhood battery and peak shaving</h2></div>
+
+      <label class="switch" for="batteryEnabled">
+        <input id="batteryEnabled" type="checkbox"/>
+        <span>Install the shared battery</span>
+      </label>
+      <p class="help" style="margin:6px 0 16px;color:var(--muted);font-size:11px">
+        With this off the neighbourhood has no storage at all, the control strategy never runs, and the dashboard shows a single net load line.
+      </p>
+
+      <fieldset class="form-grid" id="batteryFields">
+        <div class="field">
+          <label for="batteryCapacityKwh">Capacity</label>
+          <input id="batteryCapacityKwh" type="number" min="0" max="100000" step="1" required/>
+          <span class="help">kWh of usable storage. It starts each run at half full.</span>
+          <span class="err" id="batteryCapacityKwhErr"></span>
+        </div>
+        <div class="field">
+          <label for="batteryMaxPowerKw">Maximum power</label>
+          <input id="batteryMaxPowerKw" type="number" min="0" max="10000" step="1" required/>
+          <span class="help">kW ceiling in either direction. This caps how much of a peak can ever be shaved in one interval.</span>
+          <span class="err" id="batteryMaxPowerKwErr"></span>
+        </div>
+        <div class="field">
+          <label for="batteryRoundTripEfficiency">Round trip efficiency</label>
+          <div class="slider-row">
+            <input id="batteryRoundTripEfficiency" type="range" min="10" max="100" step="1"/>
+            <output for="batteryRoundTripEfficiency" id="batteryRoundTripEfficiencyOut">0 %</output>
+          </div>
+          <span class="help">Energy out divided by energy in over a full cycle, 10 to 100 %. Sent to the API as a fraction, so 90 % is stored as 0.90.</span>
+        </div>
+        <div class="field">
+          <label for="peakShavingThresholdKw">Peak shaving threshold</label>
+          <input id="peakShavingThresholdKw" type="number" min="0" max="100000" step="1" required/>
+          <span class="help"><b>Optional hard ceiling, 0 = percentile strategy only.</b> Above 0 the battery also discharges to hold the
+            neighbourhood under this many kW, on top of its normal behaviour of discharging in the top 20 % of observed load and
+            recharging in the bottom 40 %.</span>
+          <span class="err" id="peakShavingThresholdKwErr"></span>
+        </div>
+      </fieldset>
+    </section>
+
+    <!-- ---- save ----------------------------------------------------- -->
+    <section class="panel">
+      <div class="notice restart">
+        <b>Saving restarts the simulation.</b> The neighbourhood is rebuilt from the new seed, the ledger and both peak
+        counters are reset to zero, and 24 simulated hours are replayed immediately so the chart is full on the first
+        paint. Nothing from the previous run is carried over.
+      </div>
+      <div class="actions" style="margin-top:14px">
+        <button id="save" class="btn primary" type="submit">Save and restart</button>
+        <button id="revert" class="btn" type="button">Discard changes</button>
+        <span class="save-state" id="saveState"></span>
+      </div>
+    </section>
+  </form>
+</main>
+
+<script src="config.js"></script>
+</body>
+</html>

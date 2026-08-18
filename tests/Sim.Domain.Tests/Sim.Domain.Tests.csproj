@@ -13,6 +13,12 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Sim.SharedKernel\Sim.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\Sim.Energy\Sim.Energy.csproj" />
+    <ProjectReference Include="..\..\src\Sim.Simulation\Sim.Simulation.csproj" />
+    <ProjectReference Include="..\..\src\Sim.Control\Sim.Control.csproj" />
+    <ProjectReference Include="..\..\src\Sim.Accounting\Sim.Accounting.csproj" />
+    <ProjectReference Include="..\..\src\Sim.Application\Sim.Application.csproj" />
     <ProjectReference Include="..\..\src\Sim.Infrastructure\Sim.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

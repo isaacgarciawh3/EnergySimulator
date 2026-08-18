@@ -4,5 +4,6 @@
     <ProjectReference Include="..\Sim.Simulation\Sim.Simulation.csproj" />
     <ProjectReference Include="..\Sim.Energy\Sim.Energy.csproj" />
     <ProjectReference Include="..\Sim.Accounting\Sim.Accounting.csproj" />
+    <ProjectReference Include="..\Sim.Control\Sim.Control.csproj" />
   </ItemGroup>
 </Project>

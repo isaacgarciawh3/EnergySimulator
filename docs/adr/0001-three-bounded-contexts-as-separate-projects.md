@@ -1,4 +1,4 @@
-# ADR-0001: Three bounded contexts, each its own project
+# ADR-0001: Bounded contexts, each its own project
 
 Status: accepted
 Date: 2026-08-18
@@ -19,11 +19,22 @@ gone and no reviewer will find it.
 Three bounded contexts, each a separate project, each with exactly one
 aggregate root:
 
-| Context | Aggregate root | Answers |
+| Context | Owns | Answers |
 |---|---|---|
-| Simulation | `SimulationRun` | when are we, what is the weather |
-| Energy | `Neighbourhood` | given that, what power flows |
-| Accounting | `EnergyLedger` | given those readings, what do the books say |
+| Energy | `Neighbourhood`, `House`, `Asset`, `Battery` | what exists |
+| Simulation | clock, weather, behaviours | what everything is doing right now |
+| Control | `IStorageControlStrategy` | what the battery should do about it |
+| Accounting | `EnergyLedger` | what all of that means for the books |
+
+**Revised on 2026-08-18.** The first version of this decision put the physics
+inside Energy: assets computed their own power from a seed and the weather. That
+is the Simulation context living inside Energy, and it fails the test that
+matters - replace the simulation with real IoT telemetry and Energy would have
+had to be rewritten.
+
+Energy now describes and does not behave. Simulation produces `PowerReading`.
+Swapping the producer touches neither Energy nor Accounting. Control arrived
+with the battery and is justified separately in ADR-0009.
 
 Each references only `Sim.SharedKernel`. `Sim.Energy` has no project reference
 to `Sim.Accounting`, so the coupling is not expressible - the compiler rejects
