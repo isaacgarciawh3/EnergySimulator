@@ -247,14 +247,28 @@ public sealed class TheConfigurationApiSpecification(SimulationApiFixture api) :
     [Fact]
     public async Task Given_the_same_seed_When_the_configuration_is_reapplied_Then_the_world_is_rebuilt_identically()
     {
+        // Compares the LAYOUT - which houses exist and what is installed in them -
+        // because that is what a seed determines. It deliberately does not compare
+        // live power: the worker keeps ticking between the two reads, so those
+        // values are a function of the tick index, not of the seed, and asserting
+        // on them makes the test fail whenever the machine is busy. An earlier
+        // version of this test did exactly that and was flaky under parallel load.
         await api.PutConfigurationAsync(c => { c["seed"] = 31337.0; c["pvShare"] = 0.5; });
-        var first = (await api.GetJsonAsync("/api/simulation")).GetProperty("houses").ToString();
+        var first = await LayoutAsync();
 
         await api.PutConfigurationAsync(c => { c["seed"] = 31337.0; c["pvShare"] = 0.5; });
-        var second = (await api.GetJsonAsync("/api/simulation")).GetProperty("houses").ToString();
+        var second = await LayoutAsync();
 
         second.ShouldBe(first);
+        first.ShouldNotBeEmpty();
     }
+
+    /// <summary>House ids and their installed asset types - everything the seed decides, and nothing the clock decides.</summary>
+    private async Task<IReadOnlyList<string>> LayoutAsync() =>
+        (await api.GetJsonAsync("/api/simulation")).GetProperty("houses").EnumerateArray()
+            .Select(h => h.GetProperty("id").GetString() + ":" +
+                         string.Join(",", h.GetProperty("assets").EnumerateArray().Select(a => a.GetString())))
+            .ToList();
 }
 
 /// <summary>
