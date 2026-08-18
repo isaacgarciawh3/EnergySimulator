@@ -11,7 +11,7 @@ task_id: TASK-015
 title: Make the simulation's aggregate root explicit and readable (Isaac)
 type: refactor
 priority: high
-status: in_review
+status: done
 created: 2026-08-18
 updated: 2026-08-18
 

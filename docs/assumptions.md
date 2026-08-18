@@ -227,8 +227,26 @@ design is not currently reachable without externalising that state. This is a
 real constraint, not an oversight, and it is the honest answer to a question
 about concurrency.
 
-**OP-05 - Fourth context.** Whether a tariff or retailer context belongs in the
-model at all, or whether A-007 stands.
+**OP-05 - ANSWERED 2026-08-18, sideways.** A fourth context did arrive - and it
+was Control (ADR-0009), not tariffs. Money stays cut exactly as A-007 decided;
+the open question resolved itself by the battery requirement proving where the
+next context boundary actually was.
+
+**OP-06 - No minimum state-of-charge reserve.** The battery will run itself
+down to nearly empty for the evening peak. Real installations keep a floor.
+Open, registered by TASK-012.
+
+**OP-07 - The controller is reactive, not predictive.** The first simulated day
+is a warm-up while the percentile window fills, so headline peak reduction
+understates steady state. Open, registered by TASK-012.
+
+**OP-08 - No ramp limits, degradation or cycle counting** on the battery.
+Open, registered by TASK-012.
+
+**OP-09 - RESOLVED 2026-08-18.** The two peak-reduction figures (cumulative
+since start vs last 24 simulated hours) are labelled with their own scope
+everywhere they appear - verified in the rendered dashboard, which states
+outright that the two pairs measure different windows and will not agree.
 
 ---
 
