@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: feat/bounded-contexts
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-009
-titulo: Three bounded contexts with compiler-enforced isolation (Isaac)
-tipo: refactor
-prioridade: critica
-status: em_revisao
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+title: Three bounded contexts with compiler-enforced isolation (Isaac)
+type: refactor
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: [TASK-003, TASK-004, TASK-005]
-bloqueia: [TASK-007, TASK-008]
+depends_on: [TASK-003, TASK-004, TASK-005]
+blocks: [TASK-007, TASK-008]
 ---
 
 ## Objective

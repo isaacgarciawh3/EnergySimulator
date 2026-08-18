@@ -1,19 +1,19 @@
 ---
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: main
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 task_id: TASK-003
-titulo: Simulation and Accounting domain core (Isaac)
-tipo: feature
-prioridade: critica
-status: substituida_por_TASK-009
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
-epico: Utilus home assignment
-depende_de: [TASK-002]
-bloqueia: []
+title: Simulation and Accounting domain core (Isaac)
+type: feature
+priority: critical
+status: superseded_by_TASK-009
+created: 2026-08-18
+updated: 2026-08-18
+epic: Utilus home assignment
+depends_on: [TASK-002]
+blocks: []
 ---
 
 ## Objective

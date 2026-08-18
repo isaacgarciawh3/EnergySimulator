@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: feat/scenario-config-from-file
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-014
-titulo: Boot the scenario from the configuration file, behind a repository (Isaac)
-tipo: feature
-prioridade: critica
+title: Boot the scenario from the configuration file, behind a repository (Isaac)
+type: feature
+priority: critical
 status: done
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: [TASK-013]
-bloqueia: []
+depends_on: [TASK-013]
+blocks: []
 ---
 
 ## Objective

@@ -2,25 +2,25 @@
 # === EXECUTION CONTEXT ===
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: docs/architecture-baseline
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 
 # === TASK METADATA ===
 task_id: TASK-010
-titulo: Documentation baseline - requirements, assumptions, ADRs, C4 (Isaac)
-tipo: docs
-prioridade: critica
-status: aprovada
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
+title: Documentation baseline - requirements, assumptions, ADRs, C4 (Isaac)
+type: docs
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
 
 # === GROUPING ===
-epico: Utilus home assignment
+epic: Utilus home assignment
 
 # === DEPENDENCIES ===
-depende_de: []
-bloqueia: [TASK-007, TASK-008]
+depends_on: []
+blocks: [TASK-007, TASK-008]
 ---
 
 ## Objective

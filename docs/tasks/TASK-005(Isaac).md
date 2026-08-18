@@ -1,19 +1,19 @@
 ---
 git: git@github-wh3:isaacgarciawh3/EnergySimulator.git
 branch: main
-cliente: Utilus
-projeto: EnergySimulator
-modulo: Assumptions
+client: Utilus
+project: EnergySimulator
+module: Assumptions
 task_id: TASK-005
-titulo: Application layer: ports, use cases, tick bus, projections (Isaac)
-tipo: feature
-prioridade: critica
-status: concluida
-criado_em: 2026-08-18
-atualizado_em: 2026-08-18
-epico: Utilus home assignment
-depende_de: [TASK-003]
-bloqueia: []
+title: Application layer: ports, use cases, tick bus, projections (Isaac)
+type: feature
+priority: critical
+status: done
+created: 2026-08-18
+updated: 2026-08-18
+epic: Utilus home assignment
+depends_on: [TASK-003]
+blocks: []
 ---
 
 ## Objective
