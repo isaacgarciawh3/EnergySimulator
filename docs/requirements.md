@@ -49,11 +49,39 @@ the reason recorded in `assumptions.md`.
 
 | # | Requirement | Status | Where |
 |---|---|---|---|
-| R-24 | Neighbourhood configurable | Done | `SimulationConfiguration` persisted in SQLite, `PUT /api/simulation/configuration` |
+| R-24 | Neighbourhood configurable | Done | The requirement lists three acceptable options and we use the first: a fixed seed plus stated proportions, persisted in SQLite and editable at runtime via `PUT /api/simulation/configuration`. A JSON file for the physical parameters is TASK-013. |
 | R-25 | Fixed seed reproducibility | Done | whole world is a pure function of the seed. ADR-0006 |
 | R-26 | Exactly 30 houses | Done | `Neighbourhood.RequiredHouses`, constructor invariant |
 | R-27 | Exactly 6 public chargers | Done | constructor invariant |
 | R-28 | Documented asset distribution | Done | A-006: 40% PV, 30% heat pump, 20% home EV |
+
+## 4b. Neighbourhood battery and peak shaving (added mid-build)
+
+New requirement delivered after the architecture was in place, 120 minutes.
+
+| # | Requirement | Status | Where |
+|---|---|---|---|
+| R-43 | Battery has capacity (kWh) | Done | `Battery.CapacityKwh`, default 250 |
+| R-44 | Battery has max charge/discharge power (kW) | Done | `Battery.MaxPowerKw`, default 80, clamped in `BatterySimulator` |
+| R-45 | Round-trip efficiency (optional) | Done | `Battery.RoundTripEfficiency`, default 0.90, applied as sqrt per leg |
+| R-46 | Control strategy aiming to reduce peaks | Done | `PeakShavingStrategy` in the Control context |
+| R-47 | Strategy uses threshold or top N% periods | Done | Top 20% by rolling percentile; optional fixed ceiling on top. ADR-0010 |
+| R-48 | Show net load with and without battery | Open | data done (`netWithoutBatteryKw` per point); chart in TASK-007 |
+| R-49 | Show battery power and state of charge | Open | data done (`battery`, `socPercent`); UI in TASK-007 |
+| R-50 | Highlight peak shaving effect | Open | figures computed (`peakWithBatteryKw`, `peakWithoutBatteryKw`); display in TASK-007 |
+
+Measured effect, seed 20260818, winter start:
+
+```
+peak WITHOUT battery  127.32 kW
+peak WITH battery     107.61 kW   -> 19.71 kW reduction (15.5%, cumulative since start)
+within the 24h window 127.3 -> 64.8 kW  (49.1% flatter)
+battery state of charge cycling 2% - 68%
+```
+
+The two percentages measure different things and are labelled accordingly
+everywhere they appear. The cumulative figure includes the controller's warm-up
+day and therefore understates steady-state performance.
 
 ## 5. Quality expectations
 
@@ -61,7 +89,7 @@ the reason recorded in `assumptions.md`.
 |---|---|---|---|
 | R-29 | Readable, maintainable structure | Done | seven projects, dependency rule inward. ADR-0001 |
 | R-30 | Clear domain modelling | Done | three bounded contexts, one aggregate root each. ADR-0001 |
-| R-31 | Basic tests for core logic | Open | TASK-008 |
+| R-31 | Basic tests for core logic | In progress | TASK-008: accounting conservation, determinism, domain invariants, control strategy, battery physics, weather, architecture |
 | R-32 | Documentation | Partial | this document set; README still thin |
 
 ## 6. Deliverables
@@ -76,7 +104,7 @@ the reason recorded in `assumptions.md`.
 | R-38 | Data model documented | Done | `design.md` |
 | R-39 | Assumptions documented | Done | `assumptions.md` |
 | R-40 | Known limitations and next steps | Done | `assumptions.md`, section "Limitations" |
-| R-41 | Tests on simulation correctness and accounting | Open | TASK-008 |
+| R-41 | Tests on simulation correctness and accounting | In progress | TASK-008 |
 | R-42 | AI chat log in the repository | Done | `AI - Prompts/` |
 
 ## Assignment priority order

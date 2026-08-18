@@ -20,6 +20,7 @@ after the fact; corrections appear as later entries, not as rewrites.
 | 001 | [001-kickoff-domain-model.md](001-kickoff-domain-model.md) | Assignment intake, bounded contexts, architecture direction |
 | 002 | [002-timebox-and-assumption-closure.md](002-timebox-and-assumption-closure.md) | 3h budget, assumptions closed, build task drafted |
 | 003 | [003-go-decision-and-animation-requirement.md](003-go-decision-and-animation-requirement.md) | Go decision, configurable time, exciting animation requirement |
+| 005 | [005-review-cycle-verbatim.md](005-review-cycle-verbatim.md) | Full review cycle: bounded context corrections, battery requirement, accountability |
 | 004 | [004-sqlite-and-task-breakdown.md](004-sqlite-and-task-breakdown.md) | SQLite persistence, granular tasks TASK-002..008 |
 
 

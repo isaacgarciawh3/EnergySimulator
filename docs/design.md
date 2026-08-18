@@ -9,37 +9,52 @@ The short version of how this is built and why. `c4.md` has the diagrams,
 |---|---|---|---|
 | `SimulationRun` | Sim.Simulation | Owns simulated time. Advances the clock and reports the weather and season for each tick. | Anything about power, houses or kilowatt-hours |
 | `WeatherModel` | Sim.Simulation | Temperature, cloud cover, irradiance as a pure function of instant and seed | Knowing what consumes the energy |
-| `Neighbourhood` | Sim.Energy | Aggregate root. Holds 30 houses and 6 charge points, measures every asset in a fixed order | Settling with the grid, accumulating totals |
-| `IEnergyAsset` | Sim.Energy | One call signature every asset answers, whatever its physics | - |
+| `Neighbourhood` | Sim.Energy | Aggregate root. Describes 30 houses, 6 charge points and the battery, and protects those counts | Behaving. It has no physics, no clock and no weather |
+| `Asset`, `Battery` | Sim.Energy | Nameplate data: meter id, type, rating, capacity, efficiency | What the thing is doing right now |
+| `IAssetBehaviour` | Sim.Simulation | One call signature every asset behaviour answers, whatever its physics | - |
+| `NeighbourhoodSimulator` | Sim.Simulation | Reads the Energy structure and emits a `PowerReading` per meter per interval | Deciding policy, keeping books |
+| `BatterySimulator` | Sim.Simulation | Applies a setpoint, clamps to limits, applies losses, tracks state of charge | Deciding when to charge |
+| `PeakShavingStrategy` | Sim.Control | Decides a battery setpoint from net load and the battery's limits | Knowing about houses, weather or the calendar |
 | `EnergyLedger` | Sim.Accounting | Aggregate root. Cumulative energy per meter, and grid settlement per interval | Knowing what a heat pump is |
-| `ContextTranslator` | Sim.Application | Anti-corruption layer between the three contexts | Any business rule |
-| `SimulationEngine` | Sim.Application | The one orchestrator. Runs a tick through all three contexts | Physics, bookkeeping, timekeeping |
+| `NeighbourhoodBuilder` | Sim.Application | Builds the world from configuration and the seed | Deciding physics |
+| `SimulationParameters` | Sim.Application | Binds and validates appsettings.Simulation.json | - |
+| `SimulationEngine` | Sim.Application | The one orchestrator. Runs a tick through all four contexts | Physics, policy, bookkeeping, timekeeping |
 | `SimulationWorker` | Sim.Api | Drives the clock at the configured rate | Everything else |
 | `SimulationEndpoints` | Sim.Api | REST surface. Every handler delegates and returns | Any logic at all |
 | Sqlite stores | Sim.Infrastructure | Configuration persistence and the read-side projection | - |
-| `InProcessTickBus` | Sim.Infrastructure | Publishes the single integration event | - |
+
 
 ## Data model
 
 ### Domain
 
 ```
-SimulationRun (aggregate root)
-  seed, startedAt, currentInstant, tickDuration, tickIndex
-  -> emits TickEnvironment
+ENERGY - what exists (no behaviour)
+  Neighbourhood (aggregate root)      invariants: exactly 30 houses, exactly 6 charge points
+    House (entity)                    invariant: base load always present
+      Asset (meterId, ownerId, type, ratedPowerKw, responseCoefficient)
+    Asset[] publicChargePoints
+    Battery? (meterId, capacityKwh, maxPowerKw, roundTripEfficiency)
 
-Neighbourhood (aggregate root)          invariants: exactly 30 houses, exactly 6 chargers
-  House (entity)                        invariant: base load always present
-    IEnergyAsset (BaseLoad | HeatPump | PvArray | HomeEvCharger)
-  PublicEvCharger (entity)
-  -> emits MeterReading per asset per tick
+SIMULATION - what it is doing (replaceable by real telemetry)
+  SimulationRun            clock: instant, duration, tickIndex
+  WeatherModel             pure function of (instant, seed)
+  IAssetBehaviour x5       one instance per asset, some stateful
+  BatterySimulator         setpoint in, PowerReading out, tracks state of charge
+  -> emits PowerReading(meterId, instant, signed kW)
 
-EnergyLedger (aggregate root)
-  MeterAccount (entity, one per meter)
-    consumed, generated, net, lastPower
-  totals: consumed, generated, imported, exported
+CONTROL - what it should do (survives the telemetry swap)
+  GridState in -> IStorageControlStrategy -> StorageSetpoint out
+
+ACCOUNTING - what the books say (no asset vocabulary at all)
+  EnergyLedger (aggregate root)
+    MeterAccount (entity, one per meter)   consumed, generated, net, lastPower
+    totals: consumed, generated, imported, exported
   -> emits GridSettlement per tick
 ```
+
+The contract between them is `PowerReading`, which lives in the shared kernel
+precisely so that neither the producer nor the consumer owns it.
 
 Value objects, in the shared kernel: `Kilowatts` and `KilowattHours`, both
 `readonly record struct`, converted only through an explicit duration.
@@ -51,26 +66,33 @@ Three tables. No relationships - this is a read model, not a normalised store.
 | Table | Key | Holds |
 |---|---|---|
 | `simulation_configuration` | single row, `id = 1` | seed, start instant, tick minutes, ticks per second, the three asset proportions |
-| `tick_history` | `instant` | net, consumption and generation in kW. Trimmed to a rolling 48 hour window |
+| `tick_history` | `instant` | net, consumption, generation, net-without-battery, battery power and state of charge. Trimmed to a rolling 48 hour window |
 | `meter_totals` | `meter_id` | cumulative consumed, generated, net kWh and last power per meter |
 
 Engine state is deliberately absent. See ADR-0006.
 
 ## How a tick works
 
-1. `SimulationRun.Advance()` returns a `TickEnvironment` - the instant, the
-   duration, and the weather.
-2. The translator narrows it to a `MeasurementContext`. The Energy context
-   receives temperature and irradiance and never learns what a season is.
-3. `Neighbourhood.Measure()` walks its assets in a fixed order and returns one
-   signed `MeterReading` each. Fixed order matters: floating point addition is
-   not associative, so a varying order would break reproducibility.
-4. The translator maps each reading to an `EnergyEntry`. The asset type collapses
-   to consumer or generator; the Accounting context never learns what a heat
-   pump is.
-5. `EnergyLedger.Post()` accumulates per meter and settles against the grid.
-   Net positive is an import, net negative is an export, never both.
-6. The snapshot is projected and `TickCompleted` is published on the bus.
+1. `NeighbourhoodSimulator.Advance()` advances the clock, samples the weather,
+   and walks the Energy structure in a fixed order, producing one signed
+   `PowerReading` per meter. Fixed order matters: floating point addition is not
+   associative, so a varying order would break reproducibility.
+2. Those readings are summed. **That sum is the net load the neighbourhood would
+   have had with no battery at all**, and it is kept.
+3. `PeakShavingStrategy.Decide()` sees that number plus the battery's state of
+   charge, capacity and power rating. Nothing else - no houses, no weather, no
+   calendar. It returns a `StorageSetpoint`, which is a command.
+4. `BatterySimulator.Apply()` clamps the command to what is physically possible,
+   applies round-trip losses, updates state of charge, and returns a
+   `PowerReading` - what actually happened, which differs from what was asked
+   whenever the battery could not comply.
+5. `EnergyLedger.Post()` takes every reading including the battery's, accumulates
+   per meter, and settles against the grid. Net positive is an import, net
+   negative an export, never both.
+6. The snapshot is projected, carrying both the with-battery and without-battery
+   figures.
+
+Step 2 is why the peak-shaving visualisation needs no second simulation run.
 
 ## The physical assumptions, in prose
 
@@ -121,6 +143,7 @@ which is outstanding.
 ## What is deliberately not here
 
 Brokers, sagas, leases, reapers, heartbeats, separate worker processes, event
-sourcing and tariffs. Each is discussed in `assumptions.md` under Limitations,
+sourcing and tariffs. An in-process tick bus was built and then deleted for
+having no subscribers (ADR-0004). Each is discussed in `assumptions.md` under Limitations,
 with the seam that would let it in. Building any of them at this scope would
 signal poor judgement rather than depth.

@@ -1,10 +1,19 @@
 using Sim.Api;
 using Sim.Api.Endpoints;
+using Sim.Application.Configuration;
 using Sim.Application.Engine;
 using Sim.Application.Ports;
 using Sim.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Physical parameters come from appsettings.Simulation.json. The file is optional:
+// absent, the shipped defaults apply and the application still starts.
+builder.Configuration.AddJsonFile("appsettings.Simulation.json", optional: true, reloadOnChange: false);
+var simulationParameters = builder.Configuration.GetSection(SimulationParameters.SectionName)
+    .Get<SimulationParameters>() ?? new SimulationParameters();
+simulationParameters.Validate();
+builder.Services.AddSingleton(simulationParameters);
 
 // ---- Composition root: the only place that knows which adapter implements which port ----
 var databasePath = builder.Configuration["Simulation:DatabasePath"] ?? "sim.db";

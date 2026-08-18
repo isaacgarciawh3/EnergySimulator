@@ -22,8 +22,12 @@ namespace Sim.Application.Engine;
 /// The controller sees that number and commands the battery. Both figures then
 /// exist naturally, which is what the peak-shaving visualisation needs.
 /// </summary>
-public sealed class SimulationEngine(ISimulationConfigurationStore configurations, IProjectionStore projections)
+public sealed class SimulationEngine(
+    ISimulationConfigurationStore configurations,
+    IProjectionStore projections,
+    SimulationParameters? parameters = null)
 {
+    private readonly SimulationParameters _parameters = parameters ?? new SimulationParameters();
     private readonly Lock _gate = new();
 
     private SimulationConfiguration _configuration = SimulationConfiguration.Default;
@@ -64,9 +68,9 @@ public sealed class SimulationEngine(ISimulationConfigurationStore configuration
             _configuration = configuration;
             if (persist) configurations.Save(configuration);
 
-            _neighbourhood = NeighbourhoodBuilder.Build(configuration);
+            _neighbourhood = NeighbourhoodBuilder.Build(configuration, _parameters);
             _simulator = new NeighbourhoodSimulator(_neighbourhood, unchecked((ulong)configuration.Seed),
-                configuration.StartInstant, configuration.TickDuration);
+                configuration.StartInstant, configuration.TickDuration, _parameters.ToProfiles());
             _battery = _neighbourhood.Battery is { } spec ? new BatterySimulator(spec) : null;
             _strategy = new PeakShavingStrategy(
                 configuration.PeakShavingThresholdKw > 0 ? configuration.PeakShavingThresholdKw : null,

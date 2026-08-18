@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Neighbourhood Energy Simulation</title>
+<link rel="stylesheet" href="app.css"/>
+</head>
+<body>
+<div id="sky" class="sky"></div>
+
+<header class="bar">
+  <div class="brand">
+    <span class="dot"></span>
+    <div>
+      <h1>Neighbourhood Energy Simulation</h1>
+      <p class="sub">30 houses &middot; 6 public chargers &middot; deterministic, seed <b id="seed">—</b></p>
+    </div>
+  </div>
+  <div class="clock">
+    <div class="date" id="date">—</div>
+    <div class="time" id="time">--:--</div>
+  </div>
+  <div class="weather">
+    <div class="wx-main"><span id="wxIcon" class="wx-icon">☀</span><span id="temp">—</span></div>
+    <div class="wx-meta"><span id="season" class="badge">—</span><span id="cloud" class="muted">—</span></div>
+  </div>
+  <div class="controls">
+    <button id="toggle" class="btn primary">Pause</button>
+    <label class="speed">Speed <b id="speedVal">—</b>
+      <input id="speed" type="range" min="1" max="60" step="1" value="8"/>
+    </label>
+    <a class="btn ghost" href="config.html">Configuration</a>
+  </div>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="stat big" id="netCard">
+      <span class="label">Neighbourhood net power</span>
+      <span class="value"><b id="net">0.0</b><i>kW</i></span>
+      <span class="hint" id="netHint">—</span>
+    </div>
+    <div class="stat"><span class="label">Consumption</span><span class="value neg"><b id="cons">0.0</b><i>kW</i></span></div>
+    <div class="stat"><span class="label">Generation</span><span class="value pos"><b id="gen">0.0</b><i>kW</i></span></div>
+    <div class="stat"><span class="label">Imported total</span><span class="value"><b id="imp">0</b><i>kWh</i></span></div>
+    <div class="stat"><span class="label">Exported total</span><span class="value"><b id="exp">0</b><i>kWh</i></span></div>
+    <div class="stat"><span class="label">Consumed / generated</span><span class="value"><b id="totals">0 / 0</b><i>kWh</i></span></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Last 24 simulated hours</h2>
+      <div class="legend">
+        <span><i class="sw cons"></i>consumption</span>
+        <span><i class="sw gen"></i>generation</span>
+        <span><i class="sw net"></i>net load</span>
+      </div>
+    </div>
+    <svg id="chart" viewBox="0 0 1000 260" preserveAspectRatio="none"></svg>
+    <div class="axis" id="axis"></div>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <div class="panel-head"><h2>Houses</h2><span class="muted">glow = importing, green = exporting</span></div>
+      <div id="houses" class="houses"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Public chargers</h2><span class="muted">6 shared points</span></div>
+      <div id="chargers" class="chargers"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Cumulative energy per meter since simulation start</h2>
+      <input id="filter" class="filter" placeholder="filter meters…"/>
+    </div>
+    <div class="table-wrap">
+      <table id="meters"><thead><tr>
+        <th>Meter</th><th>Owner</th><th>Type</th>
+        <th class="num">Consumed kWh</th><th class="num">Generated kWh</th>
+        <th class="num">Net kWh</th><th class="num">Now kW</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

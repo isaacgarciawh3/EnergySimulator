@@ -2,6 +2,7 @@ using Sim.Energy.Domain;
 using Sim.SharedKernel;
 using Sim.Simulation.Behaviours;
 using Sim.Simulation.Domain;
+using Sim.Simulation.Parameters;
 
 namespace Sim.Simulation;
 
@@ -20,9 +21,13 @@ public sealed class NeighbourhoodSimulator
     private readonly SimulationRun _run;
     private readonly Dictionary<string, IAssetBehaviour> _behaviours;
 
-    public NeighbourhoodSimulator(Neighbourhood neighbourhood, ulong seed, DateTimeOffset start, TimeSpan tickDuration)
+    private readonly SimulationProfiles _profiles;
+
+    public NeighbourhoodSimulator(Neighbourhood neighbourhood, ulong seed, DateTimeOffset start,
+        TimeSpan tickDuration, SimulationProfiles? profiles = null)
     {
         _neighbourhood = neighbourhood;
+        _profiles = profiles ?? SimulationProfiles.Default;
         _run = new SimulationRun(seed, start, tickDuration);
         _behaviours = neighbourhood.AllAssets.ToDictionary(a => a.MeterId, Create);
     }
@@ -47,16 +52,16 @@ public sealed class NeighbourhoodSimulator
         return (tick, readings);
     }
 
-    private static IAssetBehaviour Create(Asset asset)
+    private IAssetBehaviour Create(Asset asset)
     {
         var stream = DeterministicNoise.StreamOf(asset.MeterId);
         return asset.Type switch
         {
-            AssetType.BaseLoad => new BaseLoadBehaviour(stream),
+            AssetType.BaseLoad => new BaseLoadBehaviour(stream, _profiles.BaseLoadShape),
             AssetType.Pv => new PvBehaviour(),
-            AssetType.HeatPump => new HeatPumpBehaviour(stream),
-            AssetType.HomeEvCharger => new HomeEvChargerBehaviour(stream),
-            AssetType.PublicEvCharger => new PublicChargerBehaviour(stream),
+            AssetType.HeatPump => new HeatPumpBehaviour(stream, _profiles.HeatPumpBalancePointC),
+            AssetType.HomeEvCharger => new HomeEvChargerBehaviour(stream, _profiles.HomeCharger),
+            AssetType.PublicEvCharger => new PublicChargerBehaviour(stream, _profiles.PublicCharger),
             _ => throw new ArgumentOutOfRangeException(nameof(asset), $"No behaviour for {asset.Type}."),
         };
     }
