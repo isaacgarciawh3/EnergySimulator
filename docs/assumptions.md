@@ -236,9 +236,10 @@ model at all, or whether A-007 stands.
 
 **Not built, by choice, with the seam left in place:**
 
-- **Event streaming.** `ITickBus` has a broker-shaped publish and subscribe
-  signature but an in-process synchronous adapter. Replacing it is an
-  infrastructure change. See ADR-0004.
+- **Event streaming.** An `ITickBus` port was built and then DELETED, because
+  nothing ever subscribed to it - a publish/subscribe seam with no subscriber is
+  speculative generality, not foresight. Publishing `TickCompleted` to Kafka or
+  Event Hub becomes worth doing when a second consumer exists. See ADR-0004.
 - **Separate worker process.** The tick loop is a `BackgroundService` in the API
   container. The engine API it calls would not change if it moved out.
 - **Saga, lease, reaper, heartbeat.** All belong to a distributed version of

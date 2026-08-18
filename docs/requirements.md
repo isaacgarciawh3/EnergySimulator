@@ -90,7 +90,7 @@ day and therefore understates steady-state performance.
 |---|---|---|---|
 | R-29 | Readable, maintainable structure | Done | seven projects, dependency rule inward. ADR-0001 |
 | R-30 | Clear domain modelling | Done | three bounded contexts, one aggregate root each. ADR-0001 |
-| R-31 | Basic tests for core logic | Done | 153 tests: accounting conservation, determinism, domain invariants, control strategy, battery physics, weather, and 20 architecture rules |
+| R-31 | Basic tests for core logic | Done | 173 tests: accounting conservation, determinism, domain invariants, control strategy, battery physics, weather, 20 architecture rules, and 20 API integration tests |
 | R-32 | Documentation | Done | README with architecture and tick-sequence diagrams, configuration and precedence; plus this document set, 12 ADRs and the assumption register |
 
 ## 6. Deliverables

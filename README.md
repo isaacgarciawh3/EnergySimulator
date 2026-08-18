@@ -231,7 +231,7 @@ See [ADR-0001](docs/adr/0001-three-bounded-contexts-as-separate-projects.md).
 Working and verified at runtime: the simulation engine, energy accounting, the
 controllable clock, weather and seasonality, the neighbourhood battery with
 peak shaving, JSON configuration, SQLite persistence, both web pages, and
-**141 tests**.
+**173 tests** (133 domain, 20 architecture, 20 API integration).
 
 Verified end to end rather than assumed:
 
