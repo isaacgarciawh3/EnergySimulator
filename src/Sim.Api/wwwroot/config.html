@@ -27,7 +27,7 @@
     <b>Fixed by the assignment, not by this page.</b> The neighbourhood always has exactly
     <b>30 houses</b> and exactly <b>6 public charge points</b>. Those two numbers are constraints of the problem rather
     than choices, so they are enforced in the domain model instead of being exposed here: every
-    <code>Neighbourhood</code> is constructed through <code>NeighbourhoodInvariants</code>, which rejects any other
+    <code>Neighbourhood</code> aggregate refuses to be built in any other shape - it rejects any other
     count outright. No configuration this page can send is capable of violating them. Everything below is a genuine
     setting.
   </div>
