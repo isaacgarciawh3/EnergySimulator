@@ -12,7 +12,7 @@ the reason recorded in `assumptions.md`.
 | # | Requirement | Status | Where |
 |---|---|---|---|
 | R-01 | Controllable simulation clock | Done | `SimulationRun`, `SimulationWorker`, `POST /api/simulation/pause`, `/resume` |
-| R-02 | Current simulated date/time is clear | Partial | exposed on `GET /api/simulation`; UI still open |
+| R-02 | Current simulated date/time is clear | Done | large clock in the dashboard header; observed advancing 10:00 -> 16:00 in a browser |
 | R-03 | Step size chosen and explained | Done | 15 min default, configurable. ADR-0003 |
 | R-04 | Assets structured and extensible | Done | `IEnergyAsset` strategy, `Sim.Energy.Domain.Assets` |
 | R-05 | Base household consumption, always present | Done | `BaseLoad`; enforced as a `House` invariant |
@@ -38,12 +38,12 @@ the reason recorded in `assumptions.md`.
 
 | # | Requirement | Status | Where |
 |---|---|---|---|
-| R-18 | Animated view, time advances automatically | Open | worker ticks; UI parked on `feat/dashboard-ui` |
-| R-19 | UI shows simulated date/time | Open | same |
-| R-20 | UI shows weather and season | Open | same |
-| R-21 | UI shows current neighbourhood power | Open | same |
-| R-22 | Chart of the last 24 SIMULATED hours | Open | data side done: `IProjectionStore.LoadWindow`, 97 points observed |
-| R-23 | Per asset/meter total kWh since start | Open | data side done: `GET /api/simulation` returns 62 meters |
+| R-18 | Animated view, time advances automatically | Done | polls every 250 ms; clock observed advancing in a browser without interaction |
+| R-19 | UI shows simulated date/time | Done | observed: `Sat, 07 Feb 2026 16:00` |
+| R-20 | UI shows weather and season | Done | observed: `5.8 C / Winter`, plus cloud and sun percentages and a day/night sky |
+| R-21 | UI shows current neighbourhood power | Done | observed: `38.2 kW`, with import/export direction stated |
+| R-22 | Chart of the last 24 SIMULATED hours | Done | 97-point window over simulated time; 5 SVG series observed in the DOM |
+| R-23 | Per asset/meter total kWh since start | Done | 63 meter rows observed in the table (62 assets + the battery) |
 
 ## 4. Configuration
 
@@ -67,9 +67,9 @@ New requirement delivered after the architecture was in place, 120 minutes.
 | R-45 | Round-trip efficiency (optional) | Done | `Battery.RoundTripEfficiency`, default 0.90, applied as sqrt per leg |
 | R-46 | Control strategy aiming to reduce peaks | Done | `PeakShavingStrategy` in the Control context |
 | R-47 | Strategy uses threshold or top N% periods | Done | Top 20% by rolling percentile; optional fixed ceiling on top. ADR-0010 |
-| R-48 | Show net load with and without battery | Open | data done (`netWithoutBatteryKw` per point); chart in TASK-007 |
-| R-49 | Show battery power and state of charge | Open | data done (`battery`, `socPercent`); UI in TASK-007 |
-| R-50 | Highlight peak shaving effect | Open | figures computed (`peakWithBatteryKw`, `peakWithoutBatteryKw`); display in TASK-007 |
+| R-48 | Show net load with and without battery | Done | both series on the 24h chart, dashed counterfactual vs solid actual, difference band shaded by sign |
+| R-49 | Show battery power and state of charge | Done | observed: power now, SoC 68.0% (169.9 / 250 kWh), capacity, max power, round trip, charged/discharged totals, and a 24h SoC trace |
+| R-50 | Highlight peak shaving effect | Done | dedicated panel: peak without vs with battery, kW and % reduction, on two clearly labelled scopes |
 
 Measured effect, seed 20260818, winter start:
 
@@ -90,23 +90,43 @@ day and therefore understates steady-state performance.
 |---|---|---|---|
 | R-29 | Readable, maintainable structure | Done | seven projects, dependency rule inward. ADR-0001 |
 | R-30 | Clear domain modelling | Done | three bounded contexts, one aggregate root each. ADR-0001 |
-| R-31 | Basic tests for core logic | In progress | TASK-008: accounting conservation, determinism, domain invariants, control strategy, battery physics, weather, architecture |
-| R-32 | Documentation | Partial | this document set; README still thin |
+| R-31 | Basic tests for core logic | Done | 153 tests: accounting conservation, determinism, domain invariants, control strategy, battery physics, weather, and 20 architecture rules |
+| R-32 | Documentation | Done | README with architecture and tick-sequence diagrams, configuration and precedence; plus this document set, 12 ADRs and the assumption register |
 
 ## 6. Deliverables
 
 | # | Requirement | Status | Where |
 |---|---|---|---|
-| R-33 | Running application, one-command startup | Partial | `docker compose up` builds and runs; UI not yet served |
-| R-34 | Instructions to run locally | Partial | README |
+| R-33 | Running application, one-command startup | Done | `docker compose up --build` verified: container reports healthy, both pages and the API return 200 from inside the container |
+| R-34 | Instructions to run locally | Done | README covers Docker and `dotnet run`, both on port 8181, plus the configuration file and reset path |
 | R-35 | Clean source structure | Done | see ADR-0001 |
 | R-36 | Reasonable commit history | Done | incremental commits, branch per task, PR per branch |
 | R-37 | Design overview | Done | `design.md`, `c4.md` |
 | R-38 | Data model documented | Done | `design.md` |
 | R-39 | Assumptions documented | Done | `assumptions.md` |
 | R-40 | Known limitations and next steps | Done | `assumptions.md`, section "Limitations" |
-| R-41 | Tests on simulation correctness and accounting | In progress | TASK-008 |
+| R-41 | Tests on simulation correctness and accounting | Done | energy conservation and accounting closure as property-based tests; mutation-verified that the rules actually fail when the product is broken |
 | R-42 | AI chat log in the repository | Done | `AI - Prompts/` |
+
+## Verification performed, not assumed
+
+Every "Done" above was checked against a running system rather than against
+intent. The UI rows were read out of the live DOM in a browser; the Docker row
+was a real `docker compose up --build`.
+
+```
+docker compose up --build   container healthy, / and /config.html and the API all 200
+animation                   clock observed advancing 10:00 -> 16:00 unattended
+energy conservation         generation + import == consumption + export, exact
+peak shaving                24h peak 127.3 -> 64.8 kW (49.1% flatter), sustained
+                            across successive simulated days
+configuration               file seed drove a first boot; a saved configuration
+                            survived restart; reset returned to the file; the
+                            application still started with the file deleted
+invariants                  a hostile API payload was clamped and the
+                            neighbourhood remained exactly 30 houses / 6 chargers
+architecture rules          mutation-tested: breaking a rule fails the build
+```
 
 ## Assignment priority order
 
