@@ -41,6 +41,14 @@ computed members that silently read MUTABLE state.
 4. "Naming convention in the Uncle Bob style, so EVERYONE understands the
    code" - intention-revealing names (Clean Code ch. 2): the name says what it
    does and why it exists, and if a name needs a comment, the name failed.
+5. Expression bodies and purity, approved after review discussion: `=>` is
+   used only when the body is ONE expression that reads as a sentence - two
+   steps means a block body. Purity is promised by the VERB, never by the
+   syntax: Convert*/Clamp*/Average* are pure and receive everything by
+   parameter; Store*/Take* announce mutation and are the only members allowed
+   to mutate. The functional features C# inherited from F# - switch
+   expressions, records, pattern matching - are welcome where they make a rule
+   read as a sentence.
 
 ## The technical finding behind the style point
 
