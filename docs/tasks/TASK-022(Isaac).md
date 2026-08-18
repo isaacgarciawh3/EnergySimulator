@@ -11,7 +11,7 @@ task_id: TASK-022
 title: Decompose the three god methods (Isaac)
 type: refactor
 priority: high
-status: in_progress
+status: done
 created: 2026-08-18
 updated: 2026-08-18
 
@@ -67,13 +67,13 @@ certain-or-never arrival rates, so no test reverse-engineers noise.
 
 ## Requirements
 
-- [ ] RF-01: Each method reads as its process; every buried rule is a named
+- [x] RF-01: Each method reads as its process; every buried rule is a named
       member with a verb; salts become named constants.
-- [ ] RF-02: House conventions applied to the three touched classes (layout,
+- [x] RF-02: House conventions applied to the three touched classes (layout,
       no member comments, verbs).
-- [ ] RF-03: Scenario folders HomeEvChargerBehaviour/, PublicChargerBehaviour/
+- [x] RF-03: Scenario folders HomeEvChargerBehaviour/, PublicChargerBehaviour/
       and EnergyLedger/ proving the state machines and the ledger rules;
       EnergyAccountingTests converted, FsCheck properties kept as the recorded
       exception to the constructor-act rule.
-- [ ] RNF-01: Golden master fingerprint identical; suite green.
-- [ ] RNF-02: 100 percent lines and branches on the touched classes.
+- [x] RNF-01: Golden master fingerprint identical; suite green.
+- [x] RNF-02: 100 percent lines and branches on the touched classes.
