@@ -185,6 +185,19 @@ guess about the load, and the guess was wrong.
 The controller is reactive, not predictive. It responds to the distribution it
 has already observed, so the first simulated day is a warm-up.
 
+## A-014 - Run state is overlaid on the cached snapshot
+
+**Derived**, and the fix for a real defect found by the API tests.
+
+The dashboard snapshot is a cached projection, rebuilt once per tick. Run state
+cannot come from that cache: pausing stops the ticks, so a paused engine would
+keep serving the `running: true` baked into the last snapshot it built, and
+would go on doing so forever. `Snapshot()` therefore overlays the live flag at
+read time.
+
+The general lesson, worth stating because it will recur: any field that can
+change WITHOUT a tick must not be served from a per-tick cache.
+
 ## Open points
 
 These are genuinely undecided. They are recorded here rather than resolved

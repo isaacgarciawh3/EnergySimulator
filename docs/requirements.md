@@ -126,7 +126,31 @@ configuration               file seed drove a first boot; a saved configuration
 invariants                  a hostile API payload was clamped and the
                             neighbourhood remained exactly 30 houses / 6 chargers
 architecture rules          mutation-tested: breaking a rule fails the build
+API surface                 20 integration tests boot the real application in
+                            memory and exercise every endpoint over HTTP
 ```
+
+### What is proven by test, and what is not
+
+Honesty about coverage, because "all requirements met" and "all requirements
+tested" are different claims:
+
+| Area | Proven by automated test |
+|---|---|
+| Energy accounting, conservation, closure | Yes - property-based |
+| Determinism and reproducibility | Yes - including through the public API |
+| Domain invariants (30 / 6, base load) | Yes - including against a hostile API payload |
+| Weather and season influence | Yes |
+| Battery physics and control strategy | Yes |
+| Scenario configuration and precedence | Yes - including that a reset returns to the file |
+| Architecture and dependency rules | Yes - mutation-verified |
+| REST API, all six endpoints | Yes - in-memory integration tests |
+| The rendered UI | **No** - verified by reading the live DOM in a browser |
+| `docker compose up` | **No** - verified by running it once by hand |
+
+The two "No" rows are deliberate. A browser-driving test and a container
+smoke test are both worth having and neither was affordable here; they are
+named rather than papered over.
 
 ## Assignment priority order
 
