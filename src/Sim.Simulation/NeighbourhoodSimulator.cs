@@ -28,7 +28,7 @@ public sealed class NeighbourhoodSimulator
     {
         _neighbourhood = neighbourhood;
         _profiles = profiles ?? SimulationProfiles.Default;
-        _run = new SimulationRun(seed, start, tickDuration);
+        _run = new SimulationRun(seed, start, tickDuration, _profiles.Weather);
         _behaviours = neighbourhood.AllAssets.ToDictionary(a => a.MeterId, Create);
     }
 

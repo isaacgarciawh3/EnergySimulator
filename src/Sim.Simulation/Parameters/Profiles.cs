@@ -1,3 +1,5 @@
+using Sim.Simulation.Domain.Weather;
+
 namespace Sim.Simulation.Parameters;
 
 /// <summary>
@@ -42,10 +44,12 @@ public sealed record SimulationProfiles(
     IDailyShape BaseLoadShape,
     double HeatPumpBalancePointC,
     HomeChargerProfile HomeCharger,
-    PublicChargerProfile PublicCharger)
+    PublicChargerProfile PublicCharger,
+    WeatherParameters Weather)
 {
     public static readonly SimulationProfiles Default =
-        new(new FlatDailyShape(), 15.0, HomeChargerProfile.Default, PublicChargerProfile.Default);
+        new(new FlatDailyShape(), 15.0, HomeChargerProfile.Default, PublicChargerProfile.Default,
+            WeatherParameters.Default);
 }
 
 /// <summary>Fallback used when no configuration file is present.</summary>

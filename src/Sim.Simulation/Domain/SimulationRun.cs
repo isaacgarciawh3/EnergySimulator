@@ -1,3 +1,5 @@
+using Sim.Simulation.Domain.Weather;
+
 namespace Sim.Simulation.Domain;
 
 /// <summary>Owns simulated time. Nothing else in the system decides what time it is.</summary>
@@ -5,7 +7,7 @@ public sealed class SimulationRun
 {
     private readonly WeatherModel _weather;
 
-    public SimulationRun(ulong seed, DateTimeOffset start, TimeSpan tickDuration)
+    public SimulationRun(ulong seed, DateTimeOffset start, TimeSpan tickDuration, WeatherParameters? weather = null)
     {
         if (tickDuration <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(tickDuration), "Tick duration must be positive.");
@@ -13,7 +15,7 @@ public sealed class SimulationRun
         StartedAt = start;
         CurrentInstant = start;
         TickDuration = tickDuration;
-        _weather = new WeatherModel(seed);
+        _weather = new WeatherModel(seed, weather);
     }
 
     public ulong Seed { get; }

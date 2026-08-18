@@ -1,3 +1,4 @@
+using Sim.Simulation.Domain.Weather;
 using Sim.Simulation.Parameters;
 
 namespace Sim.Application.Configuration;
@@ -29,6 +30,9 @@ public sealed class SimulationParameters
     /// <summary>Multipliers applied to the household baseline through the day.</summary>
     public DailyShape BaseLoadShape { get; init; } = new();
 
+    /// <summary>Climate constants. See WeatherParameters for what each one means.</summary>
+    public WeatherSettings Weather { get; init; } = new();
+
     /// <summary>Translates the file format into what the Simulation context asks for.</summary>
     public SimulationProfiles ToProfiles() => new(
         new ConfiguredDailyShape(BaseLoadShape),
@@ -36,7 +40,8 @@ public sealed class SimulationParameters
         new HomeChargerProfile(HomeCharger.SessionKwh.Min, HomeCharger.SessionKwh.Max,
             HomeCharger.PlugInFromHour, HomeCharger.PlugInToHour, HomeCharger.DepartureHour),
         new PublicChargerProfile(PublicCharger.SessionKwh.Min, PublicCharger.SessionKwh.Max,
-            PublicCharger.ArrivalsPerHourByBand, PublicCharger.BandUpperHours));
+            PublicCharger.ArrivalsPerHourByBand, PublicCharger.BandUpperHours),
+        Weather.ToParameters());
 
     public void Validate()
     {
@@ -45,6 +50,7 @@ public sealed class SimulationParameters
         HeatPump.Validate();
         HomeCharger.Validate();
         PublicCharger.Validate();
+        Weather.ToParameters().Validate();
     }
 }
 
@@ -112,6 +118,31 @@ public sealed class PublicChargerParameters
             if (hour < BandUpperHours[i]) return ArrivalsPerHourByBand[i];
         return ArrivalsPerHourByBand[^1];
     }
+}
+
+/// <summary>Bindable mirror of WeatherParameters. Kept separate so the file format can change without touching the model.</summary>
+public sealed class WeatherSettings
+{
+    public double AnnualMeanC { get; init; } = 10.0;
+    public double AnnualAmplitudeC { get; init; } = 8.0;
+    public int ColdestDayOfYear { get; init; } = 15;
+    public double DiurnalAmplitudeC { get; init; } = 4.0;
+    public double ColdestHourOfDay { get; init; } = 3.0;
+    public double NoiseAmplitudeC { get; init; } = 3.0;
+    public double CloudNoiseScale { get; init; } = 0.9;
+    public double WinterCloudBias { get; init; } = 0.15;
+    public double NoiseCorrelationHours { get; init; } = 3.0;
+    public double MeanDayLengthHours { get; init; } = 12.0;
+    public double DayLengthAmplitudeHours { get; init; } = 4.5;
+    public int LongestDayOfYear { get; init; } = 172;
+    public double ClearSkyExponent { get; init; } = 1.2;
+    public double CloudAttenuation { get; init; } = 0.75;
+
+    public WeatherParameters ToParameters() => new(
+        AnnualMeanC, AnnualAmplitudeC, ColdestDayOfYear, DiurnalAmplitudeC, ColdestHourOfDay,
+        NoiseAmplitudeC, CloudNoiseScale, WinterCloudBias, NoiseCorrelationHours,
+        MeanDayLengthHours, DayLengthAmplitudeHours, LongestDayOfYear,
+        ClearSkyExponent, CloudAttenuation);
 }
 
 public sealed class ConfiguredDailyShape(DailyShape shape) : IDailyShape
