@@ -3,59 +3,79 @@ using Sim.SharedKernel;
 namespace Sim.Accounting.Domain;
 
 /// <summary>
-/// AGGREGATE ROOT of the Accounting context. It takes readings and does
-/// arithmetic: cumulative energy per meter since the simulation started, and
-/// settlement against the grid.
-///
-/// It knows nothing about houses, heat pumps, weather or batteries. A meter
-/// either drew power or delivered it, and the SIGN of the reading says which.
-/// That is the entire vocabulary this context needs, which is why swapping the
-/// simulation for real telemetry does not touch a line of it.
+/// AGGREGATE ROOT of the Accounting context: arithmetic over readings and
+/// nothing else. A meter drew power or delivered it and the SIGN says which -
+/// this context never learns what a heat pump is, which is why swapping the
+/// simulation for real telemetry does not touch a line of it. Sums run in the
+/// order the readings arrive: floating point addition is not associative, so a
+/// stable order is what keeps the totals reproducible.
 /// </summary>
 public sealed class EnergyLedger
 {
     private readonly Dictionary<string, MeterAccount> _accounts = [];
 
-    public KilowattHours TotalConsumed { get; private set; }
-    public KilowattHours TotalGenerated { get; private set; }
-    public KilowattHours TotalImported { get; private set; }
-    public KilowattHours TotalExported { get; private set; }
-
-    public IReadOnlyCollection<MeterAccount> Accounts => _accounts.Values;
-
-    public GridSettlement Post(DateTimeOffset instant, TimeSpan duration, IReadOnlyList<PowerReading> readings)
+    private void PostEachReadingToItsAccount(IReadOnlyList<PowerReading> readings, TimeSpan duration)
     {
-        double consumption = 0, generation = 0;
-
         foreach (var reading in readings)
         {
             if (!_accounts.TryGetValue(reading.MeterId, out var account))
                 _accounts[reading.MeterId] = account = new MeterAccount(reading.MeterId);
             account.Post(reading, duration);
-
-            if (reading.Power.Value >= 0) consumption += reading.Power.Value;
-            else generation -= reading.Power.Value;
         }
+    }
 
-        var net = consumption - generation;
-        var import = new Kilowatts(Math.Max(0, net));
-        var export = new Kilowatts(Math.Max(0, -net));
+    private static (double ConsumptionKw, double GenerationKw) SplitBySign(IReadOnlyList<PowerReading> readings)
+    {
+        double consumptionKw = 0, generationKw = 0;
+        foreach (var reading in readings)
+        {
+            if (reading.Power.Value >= 0) consumptionKw += reading.Power.Value;
+            else generationKw -= reading.Power.Value;
+        }
+        return (consumptionKw, generationKw);
+    }
 
-        TotalConsumed += new KilowattHours(consumption * duration.TotalHours);
-        TotalGenerated += new KilowattHours(generation * duration.TotalHours);
-        TotalImported += import.Over(duration);
-        TotalExported += export.Over(duration);
-
-        return new GridSettlement(instant, new Kilowatts(net), import, export,
+    private static GridSettlement SettleWithTheGrid(
+        DateTimeOffset instant, TimeSpan duration, double consumptionKw, double generationKw)
+    {
+        var netKw = consumptionKw - generationKw;
+        var import = new Kilowatts(Math.Max(0, netKw));
+        var export = new Kilowatts(Math.Max(0, -netKw));
+        return new GridSettlement(instant, new Kilowatts(netKw), import, export,
             import.Over(duration), export.Over(duration),
-            new Kilowatts(consumption), new Kilowatts(generation));
+            new Kilowatts(consumptionKw), new Kilowatts(generationKw));
+    }
+
+    private void AccumulateTheRunningTotals(GridSettlement settlement, TimeSpan duration)
+    {
+        TotalConsumed += settlement.Consumption.Over(duration);
+        TotalGenerated += settlement.Generation.Over(duration);
+        TotalImported += settlement.ImportedEnergy;
+        TotalExported += settlement.ExportedEnergy;
+    }
+
+    public KilowattHours TotalConsumed { get; private set; }
+    public KilowattHours TotalGenerated { get; private set; }
+    public KilowattHours TotalImported { get; private set; }
+    public KilowattHours TotalExported { get; private set; }
+    public IReadOnlyCollection<MeterAccount> Accounts => _accounts.Values;
+
+    public GridSettlement Post(DateTimeOffset instant, TimeSpan duration, IReadOnlyList<PowerReading> readings)
+    {
+        PostEachReadingToItsAccount(readings, duration);
+        var (consumptionKw, generationKw) = SplitBySign(readings);
+        var settlement = SettleWithTheGrid(instant, duration, consumptionKw, generationKw);
+        AccumulateTheRunningTotals(settlement, duration);
+        return settlement;
     }
 }
 
 /// <summary>Cumulative energy for one meter since the simulation started.</summary>
-public sealed class MeterAccount(string meterId)
+public sealed class MeterAccount
 {
-    public string MeterId { get; } = meterId;
+    public MeterAccount(string meterId) => MeterId = meterId;
+
+    public string MeterId { get; }
     public KilowattHours Consumed { get; private set; }
     public KilowattHours Generated { get; private set; }
     public KilowattHours Net => Consumed - Generated;

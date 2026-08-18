@@ -35,9 +35,9 @@ public sealed class WeatherModel
         var hourOfDay = instant.TimeOfDay.TotalHours;
 
         var temperature = TemperatureModel.Combine(dayOfYear, hourOfDay, Noise(TemperatureStream, instant), _p);
-        var cloud = CloudModel.CoverFraction(dayOfYear, Noise(CloudStream, instant), _p);
-        var clearSky = SolarGeometry.ClearSkyFactor(hourOfDay, dayOfYear, _p);
-        var irradiance = SolarGeometry.IrradianceFactor(clearSky, cloud, _p);
+        var cloud = CloudModel.CoverTheSky(dayOfYear, Noise(CloudStream, instant), _p);
+        var clearSky = SolarGeometry.RateTheClearSky(hourOfDay, dayOfYear, _p);
+        var irradiance = SolarGeometry.AttenuateByCloud(clearSky, cloud, _p);
 
         return new WeatherConditions(temperature, cloud, irradiance, Seasons.Of(instant.Month));
     }

@@ -1,5 +1,6 @@
 using Shouldly;
 using Sim.Control.Domain;
+using Sim.Simulation.Domain;
 using static Sim.Domain.Tests.SimulationRunScenario.RunScenario;
 
 namespace Sim.Domain.Tests.SimulationRunScenario;
@@ -17,6 +18,6 @@ public class When_storage_is_commanded_twice_for_the_same_tick
         _secondCommand = Record.Exception(() => run.ApplyStorageSetpoint(StorageSetpoint.Idle));
     }
 
-    [Fact] public void Should_refuse_the_second_command() => _secondCommand.ShouldBeOfType<InvalidOperationException>();
+    [Fact] public void Should_refuse_the_second_command() => _secondCommand.ShouldBeOfType<SimulationInvariantViolation>();
     [Fact] public void Should_explain_it_was_already_commanded() => _secondCommand!.Message.ShouldContain("already commanded");
 }

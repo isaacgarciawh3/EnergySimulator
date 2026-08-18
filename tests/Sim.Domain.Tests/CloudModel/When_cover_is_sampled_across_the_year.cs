@@ -18,13 +18,13 @@ public class When_cover_is_sampled_across_the_year
         foreach (var noise in new[] { 0.0, 0.5, 1.0 })
             for (var day = 1; day <= 365; day += 7)
             {
-                var cover = Sim.Simulation.Domain.Weather.CloudModel.CoverFraction(day, noise, P);
+                var cover = Sim.Simulation.Domain.Weather.CloudModel.CoverTheSky(day, noise, P);
                 _lowest = Math.Min(_lowest, cover);
                 _highest = Math.Max(_highest, cover);
             }
 
-        _winterAtMidNoise = Sim.Simulation.Domain.Weather.CloudModel.CoverFraction(15, 0.5, P);
-        _summerAtMidNoise = Sim.Simulation.Domain.Weather.CloudModel.CoverFraction(196, 0.5, P);
+        _winterAtMidNoise = Sim.Simulation.Domain.Weather.CloudModel.CoverTheSky(15, 0.5, P);
+        _summerAtMidNoise = Sim.Simulation.Domain.Weather.CloudModel.CoverTheSky(196, 0.5, P);
     }
 
     [Fact] public void Should_never_drop_below_zero() => _lowest.ShouldBeGreaterThanOrEqualTo(0.0);

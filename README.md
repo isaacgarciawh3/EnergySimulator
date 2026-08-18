@@ -147,40 +147,18 @@ flowchart TB
     ENG -.->|"ports"| INFRA
 ```
 
-### One tick, end to end
+### One tick, four sentences
 
-The ordering is the design. Non-storage assets are measured first, which yields
-the net load the neighbourhood *would* have had with no battery. Control then
-acts on that number. Both figures therefore exist without a second simulation
-run — which is exactly what the peak-shaving chart needs.
-
-```mermaid
-sequenceDiagram
-    participant W as Worker
-    participant E as SimulationEngine
-    participant S as Simulation
-    participant N as Energy
-    participant C as Control
-    participant L as Accounting
-
-    W->>E: Tick()
-    E->>S: Advance()
-    S->>N: read assets and ratings
-    S-->>E: PowerReading per meter (signed kW)
-    Note over E: sum = net load WITHOUT the battery
-    E->>C: Decide(GridState)
-    Note over C: sees one number and the battery limits.<br/>No houses, no weather, no calendar.
-    C-->>E: StorageSetpoint (a command)
-    E->>S: apply setpoint to the battery
-    S-->>E: PowerReading (what actually happened)
-    E->>L: Post(all readings, battery included)
-    L-->>E: GridSettlement (import xor export)
-    Note over E: net load WITH the battery
+```
+telemetry  = run.Advance()                       what happened, without the battery
+setpoint   = strategy.Decide(gridState)          what the battery should do about it
+reading    = run.ApplyStorageSetpoint(setpoint)  what the battery actually managed
+settlement = ledger.Post(all readings)           what the books record
 ```
 
-A `StorageSetpoint` is what we asked for; a `PowerReading` is what happened.
-They differ whenever the battery cannot comply, and that difference is where
-clamping becomes visible.
+One call per aggregate root; the ordering yields the with/without-battery
+counterfactual for free. The full public surface of each root and the sequence
+diagram live in [docs/aggregate-roots.md](docs/aggregate-roots.md).
 
 ### Why the boundary is drawn there
 
@@ -201,6 +179,7 @@ behaves (ADR-0001).
 
 | Document | What is in it |
 |---|---|
+| [docs/aggregate-roots.md](docs/aggregate-roots.md) | **How the bounded contexts work with their aggregate roots** - the whole system in four classes and one flow |
 | [docs/design.md](docs/design.md) | Design overview, components, data model, physical assumptions |
 | [docs/c4.md](docs/c4.md) | C4 levels 1 to 3, the tick sequence, the dependency rule |
 | [docs/assumptions.md](docs/assumptions.md) | Every assumption, the open points, limitations and next steps |
@@ -231,7 +210,7 @@ See [ADR-0001](docs/adr/0001-three-bounded-contexts-as-separate-projects.md).
 Working and verified at runtime: the simulation engine, energy accounting, the
 controllable clock, weather and seasonality, the neighbourhood battery with
 peak shaving, JSON configuration, SQLite persistence, both web pages, and
-**173 tests** (133 domain, 20 architecture, 20 API integration).
+**293 tests** (253 domain, 20 architecture, 20 API integration).
 
 Verified end to end rather than assumed:
 

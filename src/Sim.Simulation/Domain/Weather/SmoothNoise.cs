@@ -12,11 +12,10 @@ namespace Sim.Simulation.Domain.Weather;
 /// </summary>
 public static class SmoothNoise
 {
-    /// <summary>Locates an instant: which block it falls in, and how far through that block it is (0 to 1).</summary>
     public static (long Block, double Fraction) Locate(DateTimeOffset instant, TimeSpan correlationPeriod)
     {
         if (correlationPeriod <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(correlationPeriod), "Correlation period must be positive.");
+            throw new Sim.Simulation.Domain.SimulationInvariantViolation("SmoothNoise correlation period must be positive.");
 
         var periodSeconds = (long)correlationPeriod.TotalSeconds;
         var block = Math.DivRem(instant.ToUnixTimeSeconds(), periodSeconds, out var remainder);
@@ -28,13 +27,8 @@ public static class SmoothNoise
         return (block, (double)remainder / periodSeconds);
     }
 
-    /// <summary>Linear blend. Separated out because "how we interpolate" is a decision, not an expression.</summary>
     public static double Blend(double from, double to, double fraction) => from + (to - from) * fraction;
 
-    /// <summary>
-    /// A smooth value in [0, 1) that is continuous across block boundaries and
-    /// fully determined by (seed, stream, instant).
-    /// </summary>
     public static double At(ulong seed, ulong stream, DateTimeOffset instant, TimeSpan correlationPeriod)
     {
         var (block, fraction) = Locate(instant, correlationPeriod);

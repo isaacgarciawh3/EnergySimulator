@@ -1,4 +1,5 @@
 using Shouldly;
+using Sim.Simulation.Domain;
 using Sim.Energy.Domain;
 using static Sim.Domain.Tests.SimulationRunScenario.RunScenario;
 using static Sim.Domain.Tests.TestWorld;
@@ -24,5 +25,5 @@ public class When_the_world_contains_an_unknown_asset_type
         _refusal = Record.Exception(() => RunOf(new Neighbourhood(houses, ChargePoints(6))));
     }
 
-    [Fact] public void Should_refuse_to_build_the_run() => _refusal.ShouldBeOfType<ArgumentOutOfRangeException>();
+    [Fact] public void Should_refuse_to_build_the_run() => _refusal.ShouldBeOfType<SimulationInvariantViolation>();
 }

@@ -9,5 +9,5 @@ public class When_a_zero_interval_is_supplied
 {
     private readonly Exception? _refusal = Record.Exception(() => new SimulationClock(Instant, TimeSpan.Zero));
 
-    [Fact] public void Should_refuse_to_exist() => _refusal.ShouldBeOfType<ArgumentOutOfRangeException>();
+    [Fact] public void Should_refuse_to_exist() => _refusal.ShouldBeOfType<SimulationInvariantViolation>();
 }
