@@ -20,6 +20,6 @@ public class When_the_run_has_no_battery
     }
 
     [Fact] public void Should_have_no_storage_state_to_read() => _storage.ShouldBeNull();
-    [Fact] public void Should_refuse_storage_commands() => _refusal.ShouldBeOfType<InvalidOperationException>();
+    [Fact] public void Should_refuse_storage_commands() => _refusal.ShouldBeOfType<SimulationInvariantViolation>();
     [Fact] public void Should_explain_that_there_is_no_battery() => _refusal!.Message.ShouldContain("no battery");
 }

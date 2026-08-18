@@ -9,7 +9,7 @@ public sealed class SimulationClock
     public SimulationClock(DateTimeOffset start, TimeSpan tickDuration)
     {
         if (tickDuration <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(tickDuration), "Tick duration must be positive.");
+            throw new SimulationInvariantViolation("SimulationClock.TickDuration must be positive.");
         CurrentInstant = start;
         TickDuration = tickDuration;
     }

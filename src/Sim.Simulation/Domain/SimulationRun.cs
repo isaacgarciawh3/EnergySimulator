@@ -58,11 +58,11 @@ public sealed class SimulationRun
     private void RefuseUnlessStorageCanBeCommanded()
     {
         if (_battery is null)
-            throw new InvalidOperationException("This run has no battery to command.");
+            throw new SimulationInvariantViolation("This run has no battery to command.");
         if (_lastTelemetry is null)
-            throw new InvalidOperationException("Storage can only be commanded for a tick that has been advanced.");
+            throw new SimulationInvariantViolation("Storage can only be commanded for a tick that has been advanced.");
         if (_storageCommandedForTick == _lastTelemetry.TickIndex)
-            throw new InvalidOperationException($"Storage was already commanded for tick {_lastTelemetry.TickIndex}.");
+            throw new SimulationInvariantViolation($"Storage was already commanded for tick {_lastTelemetry.TickIndex}.");
     }
 
     private static IAssetBehaviour CreateBehaviourFor(Asset asset, SimulationProfiles profiles)
@@ -75,7 +75,7 @@ public sealed class SimulationRun
             AssetType.HeatPump => new HeatPumpBehaviour(stream, profiles.HeatPumpBalancePointC),
             AssetType.HomeEvCharger => new HomeEvChargerBehaviour(stream, profiles.HomeCharger),
             AssetType.PublicEvCharger => new PublicChargerBehaviour(stream, profiles.PublicCharger),
-            _ => throw new ArgumentOutOfRangeException(nameof(asset), $"No behaviour exists for asset type {asset.Type}."),
+            _ => throw new SimulationInvariantViolation($"No behaviour exists for asset type {asset.Type}."),
         };
     }
 
@@ -101,3 +101,6 @@ public sealed class SimulationRun
 }
 
 public sealed record StorageState(double StateOfChargeKwh, double CapacityKwh, double StateOfChargePercent);
+
+/// <summary>Raised when a rule of the Simulation context would be violated. One type for the whole context: the message names the field and the rule.</summary>
+public sealed class SimulationInvariantViolation(string message) : InvalidOperationException(message);

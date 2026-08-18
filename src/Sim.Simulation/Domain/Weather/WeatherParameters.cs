@@ -81,6 +81,6 @@ public sealed record WeatherParameters(
 
     private static void Require(bool condition, string name, string requirement)
     {
-        if (!condition) throw new ArgumentException($"WeatherParameters.{name} {requirement}.", name);
+        if (!condition) throw new Sim.Simulation.Domain.SimulationInvariantViolation($"WeatherParameters.{name} {requirement}.");
     }
 }

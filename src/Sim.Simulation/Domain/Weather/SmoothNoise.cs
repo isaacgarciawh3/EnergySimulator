@@ -16,7 +16,7 @@ public static class SmoothNoise
     public static (long Block, double Fraction) Locate(DateTimeOffset instant, TimeSpan correlationPeriod)
     {
         if (correlationPeriod <= TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(correlationPeriod), "Correlation period must be positive.");
+            throw new Sim.Simulation.Domain.SimulationInvariantViolation("SmoothNoise correlation period must be positive.");
 
         var periodSeconds = (long)correlationPeriod.TotalSeconds;
         var block = Math.DivRem(instant.ToUnixTimeSeconds(), periodSeconds, out var remainder);
