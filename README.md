@@ -201,6 +201,7 @@ behaves (ADR-0001).
 
 | Document | What is in it |
 |---|---|
+| [docs/aggregate-roots.md](docs/aggregate-roots.md) | **How the bounded contexts work with their aggregate roots** - the whole system in four classes and one flow |
 | [docs/design.md](docs/design.md) | Design overview, components, data model, physical assumptions |
 | [docs/c4.md](docs/c4.md) | C4 levels 1 to 3, the tick sequence, the dependency rule |
 | [docs/assumptions.md](docs/assumptions.md) | Every assumption, the open points, limitations and next steps |
