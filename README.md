@@ -12,15 +12,27 @@ Built for the Utilus home assignment.
 docker compose up --build
 ```
 
-Then open http://localhost:8080.
+Then open **http://localhost:8181**.
 
-Without Docker:
+Without Docker — same port, so the instructions do not change:
 
 ```
 dotnet run --project src/Sim.Api
 ```
 
 No database to install, no npm, no build step, no network access required.
+
+Port 8181 is used rather than the more common 8080 simply to avoid colliding
+with whatever else is already running on the reviewer's machine. To change it,
+edit the port mapping in `compose.yaml` (Docker) or `applicationUrl` in
+`src/Sim.Api/Properties/launchSettings.json` (local).
+
+## Pages
+
+| Page | What it is for |
+|---|---|
+| http://localhost:8181/ | Dashboard: simulated clock, weather, live neighbourhood power, 24 simulated hours of net load with and without the battery, battery state of charge, per-meter cumulative energy |
+| http://localhost:8181/config.html | Configuration: seed, asset distribution, tick size, speed and battery sizing |
 
 ## What it does
 
