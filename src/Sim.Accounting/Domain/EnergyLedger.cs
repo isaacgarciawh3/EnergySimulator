@@ -14,6 +14,13 @@ public sealed class EnergyLedger
 {
     private readonly Dictionary<string, MeterAccount> _accounts = [];
 
+    private static void RefuseUnlessTheIntervalRunsForward(TimeSpan duration)
+    {
+        if (duration <= TimeSpan.Zero)
+            throw new AccountingInvariantViolation(
+                $"EnergyLedger.Post interval must run forward; {duration} would corrupt every accumulator.");
+    }
+
     private void PostEachReadingToItsAccount(IReadOnlyList<PowerReading> readings, TimeSpan duration)
     {
         foreach (var reading in readings)
@@ -62,6 +69,7 @@ public sealed class EnergyLedger
 
     public GridSettlement Post(DateTimeOffset instant, TimeSpan duration, IReadOnlyList<PowerReading> readings)
     {
+        RefuseUnlessTheIntervalRunsForward(duration);
         PostEachReadingToItsAccount(readings, duration);
         var (consumptionKw, generationKw) = SplitBySign(readings);
         var settlement = SettleWithTheGrid(instant, duration, consumptionKw, generationKw);
@@ -89,3 +97,6 @@ public sealed class MeterAccount
         LastPower = reading.Power;
     }
 }
+
+/// <summary>Raised when a rule of the Accounting context would be violated. One type for the whole context: the message names the rule.</summary>
+public sealed class AccountingInvariantViolation(string message) : InvalidOperationException(message);
