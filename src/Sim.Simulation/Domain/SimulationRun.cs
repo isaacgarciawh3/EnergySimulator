@@ -7,22 +7,16 @@ using Sim.Simulation.Parameters;
 namespace Sim.Simulation.Domain;
 
 /// <summary>
-/// AGGREGATE ROOT of the Simulation context: one run of the simulation process.
-///
-/// The run owns everything whose state crosses ticks - the clock, each meter's
-/// behaviour (a charging session in progress), and the battery's physical
-/// charge. Its invariants:
-///
-///   - simulated time only moves forward;
-///   - every advance produces exactly one reading per meter;
-///   - storage is commanded at most once per tick, and only for a tick that
-///     has actually been advanced.
-///
-/// This class is not a service (ADR-0013). Simulating IS the business here, so
-/// the process itself is domain: the two public commands below ARE the process,
-/// and the private methods are its steps. An IoT gateway would replace this
-/// class and emit the same PowerReading contract - Energy, Control and
-/// Accounting would not notice.
+/// AGGREGATE ROOT of the Simulation context: one run of the simulation process
+/// (ADR-0013 - the process IS the business, not a service). The run owns every
+/// piece of state that crosses ticks: the clock, each meter's behaviour and the
+/// battery's physical charge. Invariants: simulated time only moves forward;
+/// every advance produces exactly one reading per meter; storage is commanded
+/// at most once per tick and only for a tick already advanced. That ordering is
+/// the design: Advance() measures the non-storage meters first, so their sum is
+/// the load WITHOUT the battery, and ApplyStorageSetpoint() acts second, after
+/// Control has decided. An IoT gateway would replace this class and emit the
+/// same PowerReading contract - Energy, Control and Accounting would not notice.
 /// </summary>
 public sealed class SimulationRun
 {
@@ -48,46 +42,6 @@ public sealed class SimulationRun
         _battery = neighbourhood.Battery is { } spec ? new BatterySimulator(spec) : null;
     }
 
-    /// <summary>
-    /// Step 1 of every tick, called by the application engine: advance time,
-    /// sample the weather, and measure what every non-storage meter is doing.
-    /// The sum of these readings is the load the neighbourhood would have had
-    /// WITHOUT the battery - which is exactly why storage is a separate,
-    /// second step.
-    /// </summary>
-    public TickTelemetry Advance()
-    {
-        var (index, instant) = _clock.NextTick();
-        var weather = _weather.At(instant);
-        var readings = MeasureEveryMeter(new SimulationTick(index, instant, _clock.TickDuration, weather, _seed));
-        return _lastTelemetry = new TickTelemetry(
-            index, instant, _clock.TickDuration, weather, readings, OccupiedChargePoints());
-    }
-
-    /// <summary>
-    /// Step 2, called by the engine after Control has decided: the battery
-    /// physically responds to the setpoint over the tick just advanced, and its
-    /// meter reports what actually happened - which differs from what was asked
-    /// whenever the battery cannot comply.
-    /// </summary>
-    public PowerReading ApplyStorageSetpoint(StorageSetpoint setpoint)
-    {
-        if (_battery is null)
-            throw new InvalidOperationException("This run has no battery to command.");
-        if (_lastTelemetry is null)
-            throw new InvalidOperationException("Storage can only be commanded for a tick that has been advanced.");
-        if (_storageCommandedForTick == _lastTelemetry.TickIndex)
-            throw new InvalidOperationException($"Storage was already commanded for tick {_lastTelemetry.TickIndex}.");
-
-        _storageCommandedForTick = _lastTelemetry.TickIndex;
-        return _battery.Apply(setpoint, _lastTelemetry.Instant, _lastTelemetry.Duration);
-    }
-
-    /// <summary>What the storage currently holds. Control reads this to decide; null when the run has no battery.</summary>
-    public StorageState? Storage => _battery is null
-        ? null
-        : new StorageState(_battery.StateOfChargeKwh, _battery.CapacityKwh, _battery.StateOfChargePercent);
-
     private IReadOnlyList<PowerReading> MeasureEveryMeter(SimulationTick tick)
     {
         var readings = new List<PowerReading>(_neighbourhood.AllAssets.Count);
@@ -96,10 +50,20 @@ public sealed class SimulationRun
         return readings;
     }
 
-    private IReadOnlyCollection<string> OccupiedChargePoints() =>
+    private IReadOnlyCollection<string> CollectOccupiedChargePoints() =>
         _behaviours.Where(b => b.Value is PublicChargerBehaviour { Busy: true })
                    .Select(b => b.Key)
                    .ToHashSet();
+
+    private void RefuseUnlessStorageCanBeCommanded()
+    {
+        if (_battery is null)
+            throw new InvalidOperationException("This run has no battery to command.");
+        if (_lastTelemetry is null)
+            throw new InvalidOperationException("Storage can only be commanded for a tick that has been advanced.");
+        if (_storageCommandedForTick == _lastTelemetry.TickIndex)
+            throw new InvalidOperationException($"Storage was already commanded for tick {_lastTelemetry.TickIndex}.");
+    }
 
     private static IAssetBehaviour CreateBehaviourFor(Asset asset, SimulationProfiles profiles)
     {
@@ -114,7 +78,26 @@ public sealed class SimulationRun
             _ => throw new ArgumentOutOfRangeException(nameof(asset), $"No behaviour exists for asset type {asset.Type}."),
         };
     }
+
+    public StorageState? Storage => _battery is null
+        ? null
+        : new StorageState(_battery.StateOfChargeKwh, _battery.CapacityKwh, _battery.StateOfChargePercent);
+
+    public TickTelemetry Advance()
+    {
+        var (index, instant) = _clock.NextTick();
+        var weather = _weather.At(instant);
+        var readings = MeasureEveryMeter(new SimulationTick(index, instant, _clock.TickDuration, weather, _seed));
+        return _lastTelemetry = new TickTelemetry(
+            index, instant, _clock.TickDuration, weather, readings, CollectOccupiedChargePoints());
+    }
+
+    public PowerReading ApplyStorageSetpoint(StorageSetpoint setpoint)
+    {
+        RefuseUnlessStorageCanBeCommanded();
+        _storageCommandedForTick = _lastTelemetry!.TickIndex;
+        return _battery!.Apply(setpoint, _lastTelemetry.Instant, _lastTelemetry.Duration);
+    }
 }
 
-/// <summary>The storage's physical situation, as a value: how much it holds of how much it could.</summary>
 public sealed record StorageState(double StateOfChargeKwh, double CapacityKwh, double StateOfChargePercent);
