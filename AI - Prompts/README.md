@@ -40,6 +40,9 @@ most: physics living inside the Energy context, and the scenario being hardcoded
 in C# rather than read from the configuration file.
 | 006 | [006-full-session-log.md](006-full-session-log.md) | **Complete session log — every prompt verbatim, in order, with what each produced** |
 
+| 007 | [007-full-session-transcript.md](007-full-session-transcript.md) | **The complete session, rendered verbatim in order — 616 turns** |
+| raw | [007-raw-session.jsonl](007-raw-session.jsonl) | The unmodified Claude Code transcript, as is |
+
 ## Tasks
 
 `tasks/` holds all 13 task files the work was executed from, mirrored from `docs/tasks/`.
