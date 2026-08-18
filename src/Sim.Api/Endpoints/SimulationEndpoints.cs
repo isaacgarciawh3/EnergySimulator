@@ -22,5 +22,13 @@ public static class SimulationEndpoints
         });
         api.MapPost("/pause", (SimulationEngine engine) => { engine.Pause(); return Results.Ok(new { running = false }); });
         api.MapPost("/resume", (SimulationEngine engine) => { engine.Resume(); return Results.Ok(new { running = true }); });
+
+        // Recovery path: forget what was stored and go back to the scenario in
+        // the configuration file, without anyone deleting a database by hand.
+        api.MapPost("/configuration/reset", (SimulationEngine engine) =>
+        {
+            engine.ResetToFileScenario();
+            return Results.Ok(engine.Configuration);
+        });
     }
 }

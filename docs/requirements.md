@@ -49,7 +49,8 @@ the reason recorded in `assumptions.md`.
 
 | # | Requirement | Status | Where |
 |---|---|---|---|
-| R-24 | Neighbourhood configurable | Done | The requirement lists three acceptable options and we use the first: a fixed seed plus stated proportions, persisted in SQLite and editable at runtime via `PUT /api/simulation/configuration`. A JSON file for the physical parameters is TASK-013. |
+| R-24 | Neighbourhood configurable | Done | The requirement lists three acceptable options and we use **two**: a JSON configuration file (`appsettings.Simulation.json`, covering both the scenario and the physical parameters) plus a fixed seed with stated proportions. Editable at runtime via `PUT /api/simulation/configuration`. Precedence in A-012. |
+| R-24a | Configuration file (JSON/YAML) | Done | `src/Sim.Api/appsettings.Simulation.json` — `Scenario` section (seed, start, tick, speed, shares, battery) and the physics sections. JSON rather than YAML: .NET binds it natively, YAML would add a dependency for an identical result. TASK-013, TASK-014, ADR-0011, ADR-0012 |
 | R-25 | Fixed seed reproducibility | Done | whole world is a pure function of the seed. ADR-0006 |
 | R-26 | Exactly 30 houses | Done | `Neighbourhood.RequiredHouses`, constructor invariant |
 | R-27 | Exactly 6 public chargers | Done | constructor invariant |

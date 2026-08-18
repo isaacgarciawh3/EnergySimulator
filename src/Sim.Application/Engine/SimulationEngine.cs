@@ -23,11 +23,13 @@ namespace Sim.Application.Engine;
 /// exist naturally, which is what the peak-shaving visualisation needs.
 /// </summary>
 public sealed class SimulationEngine(
-    ISimulationConfigurationStore configurations,
+    ISimulationConfigurationRepository configurations,
     IProjectionStore projections,
-    SimulationParameters? parameters = null)
+    SimulationParameters? parameters = null,
+    ScenarioSettings? scenario = null)
 {
     private readonly SimulationParameters _parameters = parameters ?? new SimulationParameters();
+    private readonly ScenarioSettings? _scenario = scenario;
     private readonly Lock _gate = new();
 
     private SimulationConfiguration _configuration = SimulationConfiguration.Default;
@@ -46,11 +48,34 @@ public sealed class SimulationEngine(
     public bool Running { get; private set; }
     public SimulationConfiguration Configuration => _configuration;
 
+    /// <summary>
+    /// Boot. Precedence, decided HERE rather than in a persistence adapter
+    /// (ADR-0012): a stored row wins, because its existence means an operator
+    /// changed something through the UI and a restart should not overrule them.
+    /// Otherwise the configuration file supplies the scenario. The hardcoded
+    /// fallback applies only when there is no file at all.
+    /// </summary>
     public void Start()
     {
-        Apply(configurations.LoadOrSeedDefault(), persist: false);
+        var stored = configurations.Find();
+        var scenario = stored ?? _scenario?.ToConfiguration() ?? SimulationConfiguration.Default;
+
+        // Persist on a first boot so the scenario the run started from is a
+        // recorded fact rather than something re-derived on every restart.
+        Apply(scenario.Validated(), persist: stored is null);
         Running = true;
     }
+
+    /// <summary>Forgets the stored configuration and restarts from the file scenario.</summary>
+    public void ResetToFileScenario()
+    {
+        configurations.Clear();
+        Apply((_scenario?.ToConfiguration() ?? SimulationConfiguration.Default).Validated(), persist: false);
+        Running = true;
+    }
+
+    /// <summary>Where the currently running configuration came from, so the UI can say so.</summary>
+    public string ConfigurationOrigin { get; private set; } = "unknown";
 
     public void Reconfigure(SimulationConfiguration configuration)
     {
@@ -67,6 +92,7 @@ public sealed class SimulationEngine(
         {
             _configuration = configuration;
             if (persist) configurations.Save(configuration);
+            ConfigurationOrigin = configurations.Exists() ? "stored" : "configuration file";
 
             _neighbourhood = NeighbourhoodBuilder.Build(configuration, _parameters);
             _simulator = new NeighbourhoodSimulator(_neighbourhood, unchecked((ulong)configuration.Seed),

@@ -19,6 +19,11 @@ public sealed record SimulationConfiguration(
     double PeakShavingThresholdKw,
     bool BatteryEnabled)
 {
+    /// <summary>
+    /// Last-resort fallback, used ONLY when appsettings.Simulation.json is
+    /// absent. The file is the source of truth for a fresh boot (ADR-0012);
+    /// these literals exist so the application still starts without it.
+    /// </summary>
     public static readonly SimulationConfiguration Default = new(
         Seed: 20260818,
         StartInstant: new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero),

@@ -257,22 +257,27 @@ function drawDemandChart(points) {
 function renderPeaks(s, points) {
   const hasBattery = !!s.battery;
 
-  const fill = (withoutId, withId, deltaId, without, withB) => {
+  // `scope` is not decoration: the two pairs are different measurements, so the
+  // percentage carries the window it was measured over rather than relying on
+  // the heading above it to supply the meaning.
+  const fill = (withoutId, withId, deltaId, without, withB, scope) => {
     $(withoutId).textContent = f(without, 1);
     $(withId).textContent = f(withB, 1);
     const el = $(deltaId);
     const cut = without - withB;
-    if (!hasBattery) { el.className = 'delta none'; el.textContent = 'no battery installed'; return; }
-    if (without <= 0.01 || cut <= 0.05) { el.className = 'delta none'; el.textContent = 'no reduction yet'; return; }
+    if (!hasBattery) { el.className = 'delta none'; el.textContent = `no battery installed (${scope})`; return; }
+    if (without <= 0.01 || cut <= 0.05) { el.className = 'delta none'; el.textContent = `no reduction yet (${scope})`; return; }
     el.className = 'delta';
-    el.innerHTML = `<span class="arrow">▼</span>${f(cut, 1)} kW lower<span class="pct">(${f(100 * cut / without, 1)} % of the peak without the battery)</span>`;
+    el.innerHTML = `<span class="arrow">▼</span>${f(cut, 1)} kW lower`
+      + `<span class="pct">${f(100 * cut / without, 1)} % below the no-battery peak, ${esc(scope)}</span>`;
   };
 
-  fill('pkStartWithout', 'pkStartWith', 'pkStartDelta', num(s.peakWithoutBatteryKw), num(s.peakWithBatteryKw));
+  fill('pkStartWithout', 'pkStartWith', 'pkStartDelta',
+    num(s.peakWithoutBatteryKw), num(s.peakWithBatteryKw), 'since simulation start');
 
   const winNo = points.length ? Math.max(...points.map(p => num(p.netWithoutBatteryKw))) : 0;
   const winWith = points.length ? Math.max(...points.map(p => num(p.netKw))) : 0;
-  fill('pkWinWithout', 'pkWinWith', 'pkWinDelta', winNo, winWith);
+  fill('pkWinWithout', 'pkWinWith', 'pkWinDelta', winNo, winWith, 'last 24 h');
 
   $('battStateBadge').textContent = hasBattery
     ? `${f(s.battery.capacityKwh, 0)} kWh battery installed`
