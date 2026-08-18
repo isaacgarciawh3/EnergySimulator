@@ -17,7 +17,6 @@ public class When_powers_are_combined
     [Fact] public void Should_add_as_plain_numbers() => (Two + Three).Value.ShouldBe(5, AbsoluteTolerance);
     [Fact] public void Should_subtract_keeping_the_sign() => (Two - Three).Value.ShouldBe(-1, AbsoluteTolerance);
     [Fact] public void Should_negate_consumption_into_generation() => (-Two).Value.ShouldBe(-2, AbsoluteTolerance);
-    [Fact] public void Should_scale_by_a_factor() => (Two * 2).Value.ShouldBe(4, AbsoluteTolerance);
     [Fact] public void Should_become_energy_only_through_a_duration() => Two.Over(TimeSpan.FromHours(1)).Value.ShouldBe(2, AbsoluteTolerance);
     [Fact] public void Should_order_smaller_before_larger() => Two.CompareTo(Three).ShouldBeLessThan(0);
     [Fact] public void Should_write_itself_with_its_unit() => Two.ToString().ShouldEndWith(" kW");

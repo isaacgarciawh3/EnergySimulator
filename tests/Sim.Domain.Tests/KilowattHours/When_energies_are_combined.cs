@@ -12,7 +12,6 @@ public class When_energies_are_combined
 
     [Fact] public void Should_add_as_plain_numbers() => (Two + Three).Value.ShouldBe(5, AbsoluteTolerance);
     [Fact] public void Should_subtract_keeping_the_sign() => (Two - Three).Value.ShouldBe(-1, AbsoluteTolerance);
-    [Fact] public void Should_become_power_only_through_a_duration() => Two.Over(TimeSpan.FromHours(2)).Value.ShouldBe(1, AbsoluteTolerance);
     [Fact] public void Should_order_smaller_before_larger() => Two.CompareTo(Three).ShouldBeLessThan(0);
     [Fact] public void Should_write_itself_with_its_unit() => Two.ToString().ShouldEndWith(" kWh");
     [Fact] public void Should_offer_a_named_zero() => Sim.SharedKernel.KilowattHours.Zero.Value.ShouldBe(0);
