@@ -1,8 +1,12 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Sim.Accounting/Sim.Accounting.csproj" />
     <Project Path="src/Sim.Api/Sim.Api.csproj" />
     <Project Path="src/Sim.Application/Sim.Application.csproj" />
+    <Project Path="src/Sim.Energy/Sim.Energy.csproj" />
     <Project Path="src/Sim.Infrastructure/Sim.Infrastructure.csproj" />
+    <Project Path="src/Sim.SharedKernel/Sim.SharedKernel.csproj" />
+    <Project Path="src/Sim.Simulation/Sim.Simulation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Sim.Architecture.Tests/Sim.Architecture.Tests.csproj" />

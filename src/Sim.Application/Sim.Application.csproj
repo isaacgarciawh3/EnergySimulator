@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
-    <ProjectReference Include="..\Sim.Domain\Sim.Domain.csproj" />
+    <ProjectReference Include="..\Sim.SharedKernel\Sim.SharedKernel.csproj" />
+    <ProjectReference Include="..\Sim.Simulation\Sim.Simulation.csproj" />
+    <ProjectReference Include="..\Sim.Energy\Sim.Energy.csproj" />
+    <ProjectReference Include="..\Sim.Accounting\Sim.Accounting.csproj" />
   </ItemGroup>
 </Project>
