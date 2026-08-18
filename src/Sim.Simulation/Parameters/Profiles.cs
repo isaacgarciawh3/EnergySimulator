@@ -31,7 +31,7 @@ public sealed record PublicChargerProfile(
     public static readonly PublicChargerProfile Default =
         new(10.0, 40.0, [0.05, 0.20, 0.35, 0.45, 0.10], [6, 10, 15, 21, 24]);
 
-    public double ArrivalsPerHour(double hour)
+    public double EstimateArrivalsPerHour(double hour)
     {
         for (var i = 0; i < BandUpperHours.Count; i++)
             if (hour < BandUpperHours[i]) return ArrivalsPerHourByBand[i];

@@ -67,7 +67,7 @@ public sealed class SimulationRun
 
     private static IAssetBehaviour CreateBehaviourFor(Asset asset, SimulationProfiles profiles)
     {
-        var stream = DeterministicNoise.StreamOf(asset.MeterId);
+        var stream = DeterministicNoise.DeriveStreamFrom(asset.MeterId);
         return asset.Type switch
         {
             AssetType.BaseLoad => new BaseLoadBehaviour(stream, profiles.BaseLoadShape),

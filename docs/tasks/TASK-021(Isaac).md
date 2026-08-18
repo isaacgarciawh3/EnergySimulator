@@ -108,13 +108,17 @@ we decide to touch the application layer.
 
 ## Proposed follow-up tasks, in value order
 
-1. TASK-022 - Weather rule classes: strip comments, verb the methods, layout
+REORDERED BY THE REVIEWER: the god methods went first as TASK-022
+(HomeEvChargerBehaviour, PublicChargerBehaviour, EnergyLedger.Post). The list
+below shifts by one.
+
+1. TASK-023 - Weather rule classes: strip comments, verb the methods, layout
    (biggest cluster: F1+F2 in five files, all pure functions, golden-master safe).
-2. TASK-023 - `IAssetBehaviour.PowerAt` rename + behaviours file split and
+2. TASK-024 - `IAssetBehaviour.PowerAt` rename + behaviours file split and
    cleanup (one file per behaviour class, matching the test folders).
-3. TASK-024 - Accounting and Control invariant exceptions (F5) - new guards,
+3. TASK-025 - Accounting and Control invariant exceptions (F5) - new guards,
    new scenarios proving them.
-4. TASK-025 - Energy and Control layout + comment sweep (F4).
+4. TASK-026 - Energy and Control layout + comment sweep (F4).
 5. Application layer (F6) - when its refactor series opens.
 
 ## Requirements

@@ -3,47 +3,79 @@ using Sim.SharedKernel;
 namespace Sim.Control.Domain;
 
 /// <summary>
-/// Adaptive peak shaving. The battery discharges during the highest load
-/// periods and recharges during the lowest, where "highest" and "lowest" are
-/// percentiles of the load actually observed over a rolling window rather than
-/// fixed numbers.
-///
-/// A fixed threshold was tried first and failed in a way worth recording: at
-/// 45 kW against a winter load that sits above 45 kW for most of the day, the
-/// battery discharged continuously from the first interval, hit empty long
-/// before the evening peak, and delivered a 0 kW peak reduction. It was working
-/// exactly as instructed and was useless, because the threshold had no relation
-/// to the load it was meant to shave.
-///
-/// Percentiles fix that by definition: the top band is always a small minority
-/// of intervals, whatever the season, so there is always energy left for it.
+/// Adaptive peak shaving: discharge above the 80th percentile of the load
+/// observed over a rolling day, recharge below the 40th, idle in between. An
+/// optional hard ceiling applies on top for contractual connection limits. A
+/// fixed threshold was tried first and measurably failed - drained before the
+/// evening peak, 0 kW shaved (ADR-0010). With no observed history nothing can
+/// be called a peak, so the very first decision is always idle. Every setpoint
+/// is limited by the rating and by what the cells can actually absorb or
+/// deliver, so the controller never commands the impossible.
 /// </summary>
 public sealed class PeakShavingStrategy : IStorageControlStrategy
 {
-    /// <summary>Discharge above this percentile of recent load.</summary>
     public const double DischargePercentile = 0.80;
-
-    /// <summary>Recharge below this percentile of recent load.</summary>
     public const double RechargePercentile = 0.40;
 
-    private const int WindowSize = 96; // one simulated day at the default tick
+    private const int WindowSize = 96;
+    private const double SmallestMeaningfulCommandKw = 0.001;
 
-    private readonly Queue<double> _recent = new();
+    private readonly Queue<double> _recentLoadsKw = new();
     private readonly double _legEfficiency;
-    private readonly double? _fixedThresholdKw;
+    private readonly double? _hardCeilingKw;
 
-    /// <param name="fixedThresholdKw">
-    /// Optional hard ceiling. When set, the battery also discharges to hold the
-    /// neighbourhood below it, on top of the percentile behaviour.
-    /// </param>
     public PeakShavingStrategy(double? fixedThresholdKw = null, double roundTripEfficiency = 0.9)
     {
-        _fixedThresholdKw = fixedThresholdKw;
+        _hardCeilingKw = fixedThresholdKw;
         _legEfficiency = Math.Sqrt(Math.Clamp(roundTripEfficiency, 0.1, 1.0));
     }
 
-    public string Name => _fixedThresholdKw is { } t
-        ? $"Peak shaving: top {(1 - DischargePercentile) * 100:F0}% of load, hard ceiling {t:F0} kW"
+    private void ObserveTheLoad(double netKw)
+    {
+        _recentLoadsKw.Enqueue(netKw);
+        while (_recentLoadsKw.Count > WindowSize) _recentLoadsKw.Dequeue();
+    }
+
+    private void RecalculateTheThresholds()
+    {
+        var sortedLoadsKw = _recentLoadsKw.ToArray();
+        Array.Sort(sortedLoadsKw);
+        DischargeThresholdKw = PickThePercentile(sortedLoadsKw, DischargePercentile);
+        RechargeThresholdKw = PickThePercentile(sortedLoadsKw, RechargePercentile);
+    }
+
+    private static double PickThePercentile(double[] sortedLoadsKw, double fraction)
+    {
+        var position = fraction * (sortedLoadsKw.Length - 1);
+        var index = Math.Clamp((int)Math.Round(position), 0, sortedLoadsKw.Length - 1);
+        return sortedLoadsKw[index];
+    }
+
+    private double LowerTheCeilingToTheHardLimit() =>
+        _hardCeilingKw is { } hardKw ? Math.Min(DischargeThresholdKw, hardKw) : DischargeThresholdKw;
+
+    private StorageSetpoint DischargeDownToTheCeiling(GridState state, double netKw, double ceilingKw, double hours)
+    {
+        var wantedKw = netKw - ceilingKw;
+        var deliverableKw = state.StateOfChargeKwh * _legEfficiency / hours;
+        var dischargeKw = Math.Min(Math.Min(wantedKw, state.MaxPowerKw), Math.Max(0, deliverableKw));
+        return dischargeKw <= SmallestMeaningfulCommandKw
+            ? StorageSetpoint.Idle
+            : new StorageSetpoint(new Kilowatts(-dischargeKw));
+    }
+
+    private StorageSetpoint RechargeWithinTheHeadroom(GridState state, double netKw, double hours)
+    {
+        var headroomKw = RechargeThresholdKw - netKw;
+        var absorbableKw = (state.CapacityKwh - state.StateOfChargeKwh) / _legEfficiency / hours;
+        var chargeKw = Math.Min(Math.Min(headroomKw, state.MaxPowerKw), Math.Max(0, absorbableKw));
+        return chargeKw <= SmallestMeaningfulCommandKw
+            ? StorageSetpoint.Idle
+            : new StorageSetpoint(new Kilowatts(chargeKw));
+    }
+
+    public string Name => _hardCeilingKw is { } hardKw
+        ? $"Peak shaving: top {(1 - DischargePercentile) * 100:F0}% of load, hard ceiling {hardKw:F0} kW"
         : $"Peak shaving: top {(1 - DischargePercentile) * 100:F0}% of load";
 
     public double DischargeThresholdKw { get; private set; }
@@ -51,46 +83,13 @@ public sealed class PeakShavingStrategy : IStorageControlStrategy
 
     public StorageSetpoint Decide(GridState state, TimeSpan duration)
     {
-        var net = state.NetLoadBeforeStorage.Value;
-        Observe(net);
+        var netKw = state.NetLoadBeforeStorage.Value;
+        ObserveTheLoad(netKw);
+        RecalculateTheThresholds();
 
-        var hours = duration.TotalHours;
-        DischargeThresholdKw = Percentile(DischargePercentile);
-        RechargeThresholdKw = Percentile(RechargePercentile);
-
-        var ceiling = _fixedThresholdKw is { } hard ? Math.Min(DischargeThresholdKw, hard) : DischargeThresholdKw;
-
-        if (net > ceiling)
-        {
-            var wanted = net - ceiling;
-            var deliverable = state.StateOfChargeKwh * _legEfficiency / hours;
-            var discharge = Math.Min(Math.Min(wanted, state.MaxPowerKw), Math.Max(0, deliverable));
-            return discharge <= 0.001 ? StorageSetpoint.Idle : new StorageSetpoint(new Kilowatts(-discharge));
-        }
-
-        if (net < RechargeThresholdKw)
-        {
-            var headroom = RechargeThresholdKw - net;
-            var absorbable = (state.CapacityKwh - state.StateOfChargeKwh) / _legEfficiency / hours;
-            var charge = Math.Min(Math.Min(headroom, state.MaxPowerKw), Math.Max(0, absorbable));
-            return charge <= 0.001 ? StorageSetpoint.Idle : new StorageSetpoint(new Kilowatts(charge));
-        }
-
+        var ceilingKw = LowerTheCeilingToTheHardLimit();
+        if (netKw > ceilingKw) return DischargeDownToTheCeiling(state, netKw, ceilingKw, duration.TotalHours);
+        if (netKw < RechargeThresholdKw) return RechargeWithinTheHeadroom(state, netKw, duration.TotalHours);
         return StorageSetpoint.Idle;
-    }
-
-    private void Observe(double net)
-    {
-        _recent.Enqueue(net);
-        while (_recent.Count > WindowSize) _recent.Dequeue();
-    }
-
-    private double Percentile(double fraction)
-    {
-        if (_recent.Count == 0) return double.MaxValue;
-        var sorted = _recent.ToArray();
-        Array.Sort(sorted);
-        var index = Math.Clamp((int)Math.Round(fraction * (sorted.Length - 1)), 0, sorted.Length - 1);
-        return sorted[index];
     }
 }
